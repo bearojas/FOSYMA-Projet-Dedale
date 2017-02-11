@@ -1,0 +1,7 @@
+mapname:example1
+treasure:70:15
+treasure:11:100
+treasure:99:18
+agent:Explo1:27:80
+agent:Explo2:97:17
+wumpus:Golem:33
