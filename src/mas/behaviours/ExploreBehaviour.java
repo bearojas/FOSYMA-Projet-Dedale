@@ -7,6 +7,7 @@ import java.util.List;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.Path;
+import org.graphstream.graph.implementations.Graphs;
 import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.algorithm.Dijkstra;
 
@@ -30,8 +31,33 @@ public class ExploreBehaviour extends Behaviour {
 		//atention: cache l'exception IdAlreadyInUse
 		graph.setStrict(false);
 	}
+	
 
+	//fonction de recherche du plus court chemin vers le noeud ouvert le plus proche
+	// renvoie le plus court chemin sans la racine
+	public List<Node> search(Graph myGraph,Node root, ArrayList<String> open){
 
+		Dijkstra dijk = new Dijkstra(Dijkstra.Element.NODE, null, null);
+		dijk.init(myGraph);
+		dijk.setSource(root);
+		dijk.compute();
+
+		int min = Integer.MAX_VALUE;
+		Path shortest = null;
+		
+		for(String id : open){
+			double l = dijk.getPathLength(myGraph.getNode(id));
+			if(l < min){
+				min = (int) l;
+				shortest = dijk.getPath(myGraph.getNode(id));
+			}
+		}	
+		List<Node> shortPath=shortest.getNodePath();
+		shortPath.remove(0);
+		return shortPath ;
+	}
+
+	
 	@Override
 	public void action() {
 	
@@ -80,7 +106,6 @@ public class ExploreBehaviour extends Behaviour {
 					graph.addEdge(myPosition+idNeighbor, root, n);
 				}
 			}
-			System.out.println(opened.toString());
 			
 			//Little pause to allow you to follow what is going on
 			try {
@@ -113,47 +138,57 @@ public class ExploreBehaviour extends Behaviour {
 				List<Couple<String,List<Attribute>>> lobs2=((mas.abstractAgent)this.myAgent).observe();//myPosition
 				System.out.println("lobs after picking "+lobs2);
 			}
-			//si on n'a plus de noeud ouverts, l'exploration est finie
+			//si on n'a plus de noeuds ouverts, l'exploration est finie
 			if(opened.isEmpty()){
 				finished = true;
-				System.out.println("exploration finie");
+				System.out.println("Exploration finie");
 			}
 			else{
 				//si on a un chemin a suivre
 				if(chemin.size() != 0){
 					Node next = chemin.remove(0);
-					((mas.abstractAgent)this.myAgent).moveTo(next.getId());
+					// tant qu'on n'a pas pu se déplacer....
+					while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
+						// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
+						Graph tempGraph = Graphs.clone(graph);
+						ArrayList<String> tempOpened = (ArrayList<String>) opened.clone();
+						tempGraph.removeNode(next);
+						tempOpened.remove(next.getId());	
+						chemin = search(tempGraph,root, tempOpened);
+						next = chemin.remove(0);
+					}
 				}
 				else{
 					//si on a un voisin ouvert on y va :)
 					if(neighbors.size()!= 0){
-						((mas.abstractAgent)this.myAgent).moveTo(neighbors.get(0));
-					}
-					else{
-						//on cherche le noeud ouvert le plus proche
-						Dijkstra dijk = new Dijkstra(Dijkstra.Element.NODE, null, null);
-						dijk.init(graph);
-						dijk.setSource(root);
-						dijk.compute();
-						
-						int min = Integer.MAX_VALUE;
-						Path shortest = null;
-						
-						for(String id : opened){
-							double l = dijk.getPathLength(graph.getNode(id));
-							if(l < min){
-								min = (int) l;
-								shortest = dijk.getPath(graph.getNode(id));
+						int i =0 ;
+						Node next = graph.getNode(neighbors.get(i));
+						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
+							i++ ;
+							if( i >= neighbors.size()){
+								chemin = search(graph, root, opened);
+								next = chemin.remove(0);
+							} else {
+								next =graph.getNode(neighbors.get(i));
 							}
 						}
 						
+					}
+					else{
+						// si pas de voisins
+						//on cherche le noeud le plus proche						
+						chemin = search(graph, root, opened);
+						Node next = chemin.remove(0); // on enlève le noeud vers lequel on va aller pour ne pas le garder dans le chemin à faire
 						
-						chemin = shortest.getNodePath();
-						System.out.println(chemin.toString());
-						chemin.remove(0);
-						Node next = chemin.remove(0);
-						
-						((mas.abstractAgent)this.myAgent).moveTo(next.getId());
+						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
+							// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
+							Graph tempGraph = Graphs.clone(graph);
+							ArrayList<String> tempOpened = (ArrayList<String>) opened.clone();
+							tempGraph.removeNode(next);
+							tempOpened.remove(next.getId());				
+							chemin = search(tempGraph,root, tempOpened);
+							next = chemin.remove(0);
+						}
 						
 					}					
 				}
