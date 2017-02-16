@@ -106,6 +106,7 @@ public class ExploreBehaviour extends Behaviour {
 					graph.addEdge(myPosition+idNeighbor, root, n);
 				}
 			}
+			System.out.println(opened.toString());
 			
 			//Little pause to allow you to follow what is going on
 			try {
@@ -151,10 +152,8 @@ public class ExploreBehaviour extends Behaviour {
 					while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
 						// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
 						Graph tempGraph = Graphs.clone(graph);
-						ArrayList<String> tempOpened = (ArrayList<String>) opened.clone();
-						tempGraph.removeNode(next);
-						tempOpened.remove(next.getId());	
-						chemin = search(tempGraph,root, tempOpened);
+						tempGraph.removeNode(next);	
+						chemin = search(tempGraph,root, opened);
 						next = chemin.remove(0);
 					}
 				}
@@ -185,11 +184,9 @@ public class ExploreBehaviour extends Behaviour {
 						
 						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
 							// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
-							Graph tempGraph = Graphs.clone(graph);
-							ArrayList<String> tempOpened = (ArrayList<String>) opened.clone();
-							tempGraph.removeNode(next);
-							tempOpened.remove(next.getId());				
-							chemin = search(tempGraph,root, tempOpened);
+							Graph tempGraph = Graphs.clone(graph);							
+							tempGraph.removeNode(next);		
+							chemin = search(tempGraph,root, opened);
 							next = chemin.remove(0);
 						}
 						
