@@ -163,6 +163,9 @@ public class ExploreBehaviour extends Behaviour {
 					if(neighbors.size()!= 0){
 						int i =0 ;
 						Node next = graph.getNode(neighbors.get(i));
+						// si on ne peut pas aller vers son voisin
+						// soit on prend le voisin suivant
+						// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin
 						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
 							i++ ;
 							if( i >= neighbors.size()){
