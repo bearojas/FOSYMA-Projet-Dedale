@@ -185,19 +185,19 @@ public class Principal {
 		List<AgentController> agentList=new ArrayList<AgentController>();
 
 		//wumpus on container0
-//		c = containerList.get("container0");
-//		agentName="Golem";
-//		try {
-//
-//
-//			Object[] objtab=new Object[]{env,agentName};//used to give informations to the agent
-//			AgentController	ag=c.createNewAgent(agentName,DummyWumpusAgent.class.getName(),objtab);
-//			agentList.add(ag);
-//			System.out.println(agentName+" launched");
-//		} catch (StaleProxyException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+		c = containerList.get("container0");
+		agentName="Golem";
+		try {
+
+
+			Object[] objtab=new Object[]{env,agentName};//used to give informations to the agent
+			AgentController	ag=c.createNewAgent(agentName,DummyWumpusAgent.class.getName(),objtab);
+			agentList.add(ag);
+			System.out.println(agentName+" launched");
+		} catch (StaleProxyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 //		agentName="Wumpus2";
 //		try {

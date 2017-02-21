@@ -58,7 +58,7 @@ public class ExchangeMapBehaviour extends Behaviour {
 			// ajout des arcs, donc parcours des voisins 
 			for (String neighborId : entry.getValue().getLeft()){
 				// si l'arc existe deja, ne rien faire
-				if ( finalGraph.getEdge(n.getId()+neighborId)== null && finalGraph.getEdge(neighborId)+n.getId()==null){
+				if ( finalGraph.getEdge(n.getId()+neighborId)== null && finalGraph.getEdge(neighborId+n.getId())==null){
 					finalGraph.addNode(neighborId);
 					finalGraph.addEdge(n.getId()+neighborId, n.getId(), neighborId);
 				}
@@ -71,9 +71,12 @@ public class ExchangeMapBehaviour extends Behaviour {
 	public void concatenateGraphs(Graph graphReceived){
 		for (Node n : graphReceived){
 			Node old_node = myGraph.getNode(n.getId());
-			// si on ignorait l'existence de ce noeud, on l'ajoute à notre graphe
+			// si on ignorait l'existence de ce noeud, on l'ajoute à notre graphe ainsi que ses attributs
 			if (old_node == null){
 				myGraph.addNode(n.getId());
+				old_node.addAttribute("state", n.getAttribute("state"));
+				old_node.addAttribute("content", n.getAttribute("content"));
+				
 			} else { // si le noeud existait, on compare les attributs
 				//si ce noeud a ete explore, on le marque closed (ne change rien s'il l'était deja)
 				if (n.getAttribute("state").equals("closed"))
@@ -82,14 +85,30 @@ public class ExchangeMapBehaviour extends Behaviour {
 				List<Attribute> obs = n.getAttribute("content");
 				List<Attribute> old_obs = old_node.getAttribute("content");
 				// si il y avait un trésor, on garde la plus petite quantité restante de ce trésor
-				if(obs.size()!=0 && old_obs.size()!=0) {
-					if(obs.get(0).getValue() < old_obs.get(0).getValue())
-						old_node.setAttribute("content", obs);;
+//				if(obs.size()!=0 && old_obs.size()!=0) {
+//					if(obs.get(0).getValue() < old_obs.get(0).getValue())
+//						old_node.setAttribute("content", obs);
+//				}
+				//on regarde les possibles attributs pour ce noeud dans les nouvelles observations 
+				for(Attribute a : obs){
+					if(a.getName().equals("Treasure")){
+						int oldTreasureValue = (int) old_obs.get(old_obs.indexOf("Treasure")).getValue();
+						if((int)a.getValue() < oldTreasureValue ){
+							old_node.setAttribute("content", obs);
+						}
+					}
+						
 				}
 			}
 			
-			// Il faut traiter les arcs ! 
-			// Parcourir tous les arcs du graphReceived et les ajouter si ils n'existent pas deja
+			// on parcourt tous les arcs du graphReceived
+			for(Edge e : graphReceived.getEachEdge()){
+				String id0 = e.getNode0().getId();
+				String id1 = e.getNode1().getId();
+				//si l'arc n'existe pas, on l'ajoute 
+				if(myGraph.getEdge(id0+id1) == null && myGraph.getEdge(id1+id0) == null)
+					myGraph.addEdge(id0+id1, id0, id1);
+			}
 		}
 	}
 	

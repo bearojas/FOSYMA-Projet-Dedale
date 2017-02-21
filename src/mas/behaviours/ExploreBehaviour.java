@@ -81,6 +81,11 @@ public class ExploreBehaviour extends Behaviour {
 			//list of attribute associated to the currentPosition
 			List<Attribute> lattribute= lobs.get(posIndex).getRight();
 			
+//			for(Attribute a: lattribute){
+//				System.out.println("name:"+a.getName());
+//				System.out.println("valeur:"+a.getValue());
+//			}
+			
 			System.out.println(this.myAgent.getLocalName()+" -- list of observables: "+lobs);
 			
 			// create root node
