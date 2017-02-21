@@ -1,19 +1,25 @@
 package mas.agents;
 
+import java.util.ArrayList;
+import java.util.List;
 
-import env.Environment;
+import org.graphstream.graph.Graph;
+import org.graphstream.graph.Node;
+import org.graphstream.graph.implementations.SingleGraph;
 
 import mas.abstractAgent;
-import mas.behaviours.*;
+import mas.behaviours.ExploreBehaviour;
+import env.Environment;
 
-
-public class DummyExploAgent extends abstractAgent{
+public class CleverAgent extends abstractAgent{
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -1784844593772918359L;
-
+	private Graph graph = new SingleGraph("");
+	private List<Node> chemin = new ArrayList<Node>();
+	private ArrayList<String> opened = new ArrayList<String>();
 
 
 	/**
@@ -41,9 +47,8 @@ public class DummyExploAgent extends abstractAgent{
 		doWait(2000);
 		
 		//Add the behaviours
-		//addBehaviour(new RandomWalkBehaviour(this));
-		//addBehaviour(new ExploreBehaviour(this));
-		//addBehaviour(new SayHello(this));
+
+		addBehaviour(new ExploreBehaviour(this, graph, chemin, opened));
 
 		System.out.println("the agent "+this.getLocalName()+ " is started");
 

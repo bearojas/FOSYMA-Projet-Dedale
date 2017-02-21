@@ -11,6 +11,7 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
 import jade.wrapper.StaleProxyException;
+import mas.agents.CleverAgent;
 import mas.agents.DummyExploAgent;
 import mas.agents.DummyWumpusAgent;
 
@@ -233,7 +234,7 @@ public class Principal {
 		try {
 
 			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,DummyExploAgent.class.getName(),objtab);
+			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
 			agentList.add(ag);
 			System.out.println(agentName+" launched");
 		} catch (StaleProxyException e) {
@@ -248,7 +249,7 @@ public class Principal {
 
 
 			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,DummyExploAgent.class.getName(),objtab);
+			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
 			agentList.add(ag);
 			System.out.println(agentName+" launched");
 		} catch (StaleProxyException e) {
@@ -257,19 +258,19 @@ public class Principal {
 		}
 
 		//Agent0 on container0
-		c = containerList.get("container0");
-		agentName="Explo3";
-		try {
-
-
-			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,DummyExploAgent.class.getName(),objtab);
-			agentList.add(ag);
-			System.out.println(agentName+" launched");
-		} catch (StaleProxyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		c = containerList.get("container0");
+//		agentName="Explo3";
+//		try {
+//
+//
+//			Object[] objtab=new Object[]{env};//used to give informations to the agent
+//			AgentController	ag=c.createNewAgent(agentName,DummyExploAgent.class.getName(),objtab);
+//			agentList.add(ag);
+//			System.out.println(agentName+" launched");
+//		} catch (StaleProxyException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 
 		System.out.println("Agents launched...");
 		return agentList;

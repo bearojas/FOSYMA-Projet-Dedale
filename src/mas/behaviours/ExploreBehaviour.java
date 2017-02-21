@@ -21,15 +21,16 @@ public class ExploreBehaviour extends Behaviour {
 	private static final long serialVersionUID = 9088209402507795289L;
 	private boolean finished = false;
 	private Graph graph ;
-	private List<Node> chemin = new ArrayList<Node>();
+	private List<Node> chemin;
 	private ArrayList<String> opened ;
 	
-	public ExploreBehaviour(final mas.abstractAgent myagent){
+	public ExploreBehaviour(final mas.abstractAgent myagent, Graph graph, List<Node> chemin, ArrayList<String> opened){
 		super(myagent);
-		graph = new SingleGraph("");
-		opened = new ArrayList<String>();
+		this.graph = graph;
+		this.opened = opened;
+		this.chemin = chemin;
 		//atention: cache l'exception IdAlreadyInUse
-		graph.setStrict(false);
+		this.graph.setStrict(false);
 	}
 	
 
@@ -44,21 +45,17 @@ public class ExploreBehaviour extends Behaviour {
 
 		int min = Integer.MAX_VALUE;
 		Path shortest = null;
-
+		
 		for(String id : open){
 			double l = dijk.getPathLength(myGraph.getNode(id));
 			if(l < min){
 				min = (int) l;
 				shortest = dijk.getPath(myGraph.getNode(id));
 			}
-		}
-		if (shortest == null) {
-			return null ;
-		}
+		}	
 		List<Node> shortPath=shortest.getNodePath();
 		shortPath.remove(0);
 		return shortPath ;
-		
 	}
 
 	
@@ -66,6 +63,7 @@ public class ExploreBehaviour extends Behaviour {
 	public void action() {
 	
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+
 		
 		if (myPosition!=""){
 
@@ -100,6 +98,8 @@ public class ExploreBehaviour extends Behaviour {
 				if(posIndex != i){
 					String idNeighbor = lobs.get(i).getLeft();
 					Node n = graph.addNode(idNeighbor);
+					//n.addAttribute("ui.label", n.getId());
+					
 					if(n.getAttribute("state") == null || !n.getAttribute("state").equals("closed")){
 						neighbors.add(idNeighbor);
 						n.addAttribute("state", "opened");
@@ -110,6 +110,8 @@ public class ExploreBehaviour extends Behaviour {
 					graph.addEdge(myPosition+idNeighbor, root, n);
 				}
 			}
+
+			System.out.println("noeuds ouverts: "+opened.toString());
 			
 			//Little pause to allow you to follow what is going on
 			try {
@@ -145,59 +147,42 @@ public class ExploreBehaviour extends Behaviour {
 			//si on n'a plus de noeuds ouverts, l'exploration est finie
 			if(opened.isEmpty()){
 				finished = true;
-				System.err.println("EXPLORATION FINIE");
+				System.out.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
 			}
 			else{
 				//si on a un chemin a suivre
-				if(chemin != null && chemin.size() != 0){
+				if(chemin.size() != 0){
 					Node next = chemin.remove(0);
-					
-					// tant qu'on n'a pas pu se déplacer....
+					// tant qu'on n'a pas pu se dï¿½placer....
 					while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-						// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
+						// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
+						System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
+						
 						Graph tempGraph = Graphs.clone(graph);
-						tempGraph.setStrict(false);
-						if (tempGraph.removeEdge(root,next) == null) // si c'est la mauvaise indexation c'est l'inverse
-							tempGraph.removeEdge(next, root);	
+						tempGraph.removeNode(next);	
 						chemin = search(tempGraph,root, opened);
-						if(chemin != null){
-							next = chemin.remove(0);
-						} else {
-							break ;
-						}
+						next = chemin.remove(0);
 						
 					}
 				}
 				else{
-					//si on a un voisin ouvert on y va :)
+					//si on a un voisin ouvert 
 					if(neighbors.size()!= 0){
+						System.out.println("VOISINS "+neighbors.toString());
 						int i =0 ;
 						Node next = graph.getNode(neighbors.get(i));
+						System.out.println("Je vais en "+ next.getId());
 						// si on ne peut pas aller vers son voisin
 						// soit on prend le voisin suivant
 						// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin
-						// opened contient les voisins
 						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
 							i++ ;
 							if( i >= neighbors.size()){
-								if( chemin != null && chemin.size() != 0){ // on avait un chemin a suivre mais on n'a pas pu
-									Graph tempGraph = Graphs.clone(graph);
-									tempGraph.setStrict(false);
-									if (tempGraph.removeEdge(root,next) == null) // si c'est la mauvaise indexation c'est l'inverse
-										tempGraph.removeEdge(next, root);	
-									chemin = search(tempGraph,root, opened);
-								} else {
-									chemin = search(graph, root, opened);
-								}
-								if(chemin != null){
-									next = chemin.remove(0);
-									
-								} else {
-									break ;
-								}
-								
+								chemin = search(graph, root, opened);
+								next = chemin.remove(0);
 							} else {
 								next =graph.getNode(neighbors.get(i));
+								//graph.a
 							}
 						}
 						
@@ -206,20 +191,15 @@ public class ExploreBehaviour extends Behaviour {
 						// si pas de voisins
 						//on cherche le noeud le plus proche						
 						chemin = search(graph, root, opened);
-						Node next = chemin.remove(0); // on enlève le noeud vers lequel on va aller pour ne pas le garder dans le chemin à faire
+						Node next = chemin.remove(0); // on enlï¿½ve le noeud vers lequel on va aller pour ne pas le garder dans le chemin ï¿½ faire
 						
-						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){		
-							// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
-							Graph tempGraph = Graphs.clone(graph);		
-							tempGraph.setStrict(false);
-							if (tempGraph.removeEdge(root,next) == null) // si c'est la mauvaise indexation c'est l'inverse
-								tempGraph.removeEdge(next, root);	
+						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
+							System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
+							// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
+							Graph tempGraph = Graphs.clone(graph);							
+							tempGraph.removeNode(next);
 							chemin = search(tempGraph,root, opened);
-							if(chemin != null){
-								next = chemin.remove(0);
-							} else {
-								break;
-							}
+							next = chemin.remove(0);
 							
 						}
 						
