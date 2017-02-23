@@ -13,12 +13,13 @@ import org.graphstream.graph.implementations.SingleGraph;
 
 import env.Attribute;
 import env.Couple;
-import jade.core.behaviours.Behaviour;
+import jade.core.behaviours.SimpleBehaviour;
 
-public class ExchangeMapBehaviour extends Behaviour {
+public class ExchangeMapBehaviour extends SimpleBehaviour {
 
 	private static final long serialVersionUID = 9088209402507795289L;
 	private boolean finished = false;
+	private int state = 0;
 	private Graph myGraph ;
 	
 	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph){
@@ -67,35 +68,39 @@ public class ExchangeMapBehaviour extends Behaviour {
 		return finalGraph ;
 	}
 	
-	// fonction permettant de concatener 2 graphes, et donc de mettre à jour ses informations
-	public void concatenateGraphs(Graph graphReceived){
+	// fonction permettant de concatener 2 graphes, et donc de mettre ï¿½ jour ses informations
+	public void graphsFusion(Graph graphReceived){
 		for (Node n : graphReceived){
 			Node old_node = myGraph.getNode(n.getId());
-			// si on ignorait l'existence de ce noeud, on l'ajoute à notre graphe ainsi que ses attributs
+			// si on ignorait l'existence de ce noeud, on l'ajoute ï¿½ notre graphe ainsi que ses attributs
 			if (old_node == null){
-				myGraph.addNode(n.getId());
-				old_node.addAttribute("state", n.getAttribute("state"));
-				old_node.addAttribute("content", n.getAttribute("content"));
+				Node new_node = myGraph.addNode(n.getId());
+				new_node.addAttribute("state", n.getAttribute("state"));
+				new_node.addAttribute("content", n.getAttribute("content"));
 				
 			} else { // si le noeud existait, on compare les attributs
-				//si ce noeud a ete explore, on le marque closed (ne change rien s'il l'était deja)
+				//si ce noeud a ete explore, on le marque closed (ne change rien s'il l'ï¿½tait deja)
 				if (n.getAttribute("state").equals("closed"))
 					old_node.setAttribute("state", "closed");
 
 				List<Attribute> obs = n.getAttribute("content");
 				List<Attribute> old_obs = old_node.getAttribute("content");
-				// si il y avait un trésor, on garde la plus petite quantité restante de ce trésor
-//				if(obs.size()!=0 && old_obs.size()!=0) {
-//					if(obs.get(0).getValue() < old_obs.get(0).getValue())
-//						old_node.setAttribute("content", obs);
-//				}
+				
+				// si il y avait un trï¿½sor, on garde la plus petite quantitï¿½ restante de ce trï¿½sor
 				//on regarde les possibles attributs pour ce noeud dans les nouvelles observations 
 				for(Attribute a : obs){
 					if(a.getName().equals("Treasure")){
-						int oldTreasureValue = (int) old_obs.get(old_obs.indexOf("Treasure")).getValue();
-						if((int)a.getValue() < oldTreasureValue ){
+						int i = old_obs.indexOf("Treasure");
+						if(i == -1){
 							old_node.setAttribute("content", obs);
 						}
+						else{
+							int oldTreasureValue = (int) old_obs.get(i).getValue();
+							if((int)a.getValue() < oldTreasureValue ){
+								old_obs.get(i).setValue(a.getValue());
+							}
+						}
+
 					}
 						
 				}
@@ -114,7 +119,28 @@ public class ExchangeMapBehaviour extends Behaviour {
 	
 	@Override
 	public void action() {
-		
+		switch(state){
+		case 0:
+			// say hi
+			//envoie un message "hello ?"
+			//state ++
+		case 1:
+			// regardes sa boite aux lettres et attends un message de rÃ©ponse (timeout)
+			//timeout done --> finished = true
+			// state ++
+		case 2:
+			//convertir le graph en map spÃ©cifique a chaque agent qui a rÃ©pondu
+			// et on le leur envoie
+			//state++
+		case 3:
+			// on attend les graph des autres
+			// on convertit les maps reÃ§ues en graphe
+			// et on fusionne chaque graph avec le notre 
+			// state ++ 
+			
+		default:
+			finished = true;
+		}
 		
 	}
 
