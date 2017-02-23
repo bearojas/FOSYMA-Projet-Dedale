@@ -13,24 +13,23 @@ import org.graphstream.algorithm.Dijkstra;
 
 import env.Attribute;
 import env.Couple;
-import jade.core.behaviours.SimpleBehaviour;
+import jade.core.behaviours.Behaviour;
 
 
-public class ExploreBehaviour extends SimpleBehaviour {
+public class ExploreBehaviour extends Behaviour {
 	
 	private static final long serialVersionUID = 9088209402507795289L;
 	private boolean finished = false;
 	private Graph graph ;
-	private List<Node> chemin;
+	private List<Node> chemin = new ArrayList<Node>();
 	private ArrayList<String> opened ;
 	
-	public ExploreBehaviour(final mas.abstractAgent myagent, Graph graph, List<Node> chemin, ArrayList<String> opened){
+	public ExploreBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
-		this.graph = graph;
-		this.opened = opened;
-		this.chemin = chemin;
+		graph = new SingleGraph("");
+		opened = new ArrayList<String>();
 		//atention: cache l'exception IdAlreadyInUse
-		this.graph.setStrict(false);
+		graph.setStrict(false);
 	}
 	
 
@@ -63,7 +62,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	public void action() {
 	
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
-
 		
 		if (myPosition!=""){
 
@@ -80,11 +78,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			}
 			//list of attribute associated to the currentPosition
 			List<Attribute> lattribute= lobs.get(posIndex).getRight();
-			
-//			for(Attribute a: lattribute){
-//				System.out.println("name:"+a.getName());
-//				System.out.println("valeur:"+a.getValue());
-//			}
 			
 			System.out.println(this.myAgent.getLocalName()+" -- list of observables: "+lobs);
 			
@@ -103,8 +96,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				if(posIndex != i){
 					String idNeighbor = lobs.get(i).getLeft();
 					Node n = graph.addNode(idNeighbor);
-					//n.addAttribute("ui.label", n.getId());
-					
 					if(n.getAttribute("state") == null || !n.getAttribute("state").equals("closed")){
 						neighbors.add(idNeighbor);
 						n.addAttribute("state", "opened");
@@ -115,8 +106,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 					graph.addEdge(myPosition+idNeighbor, root, n);
 				}
 			}
-
-			System.out.println("noeuds ouverts: "+opened.toString());
+			System.out.println(opened.toString());
 			
 			//Little pause to allow you to follow what is going on
 			try {
@@ -152,31 +142,26 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			//si on n'a plus de noeuds ouverts, l'exploration est finie
 			if(opened.isEmpty()){
 				finished = true;
-				System.out.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
+				System.out.println("Exploration finie");
 			}
 			else{
 				//si on a un chemin a suivre
 				if(chemin.size() != 0){
 					Node next = chemin.remove(0);
-					// tant qu'on n'a pas pu se dï¿½placer....
+					// tant qu'on n'a pas pu se déplacer....
 					while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-						// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
-						System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
-						
+						// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
 						Graph tempGraph = Graphs.clone(graph);
 						tempGraph.removeNode(next);	
 						chemin = search(tempGraph,root, opened);
 						next = chemin.remove(0);
-						
 					}
 				}
 				else{
-					//si on a un voisin ouvert 
+					//si on a un voisin ouvert on y va :)
 					if(neighbors.size()!= 0){
-						System.out.println("VOISINS "+neighbors.toString());
 						int i =0 ;
 						Node next = graph.getNode(neighbors.get(i));
-						System.out.println("Je vais en "+ next.getId());
 						// si on ne peut pas aller vers son voisin
 						// soit on prend le voisin suivant
 						// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin
@@ -187,7 +172,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 								next = chemin.remove(0);
 							} else {
 								next =graph.getNode(neighbors.get(i));
-								//graph.a
 							}
 						}
 						
@@ -196,16 +180,14 @@ public class ExploreBehaviour extends SimpleBehaviour {
 						// si pas de voisins
 						//on cherche le noeud le plus proche						
 						chemin = search(graph, root, opened);
-						Node next = chemin.remove(0); // on enlï¿½ve le noeud vers lequel on va aller pour ne pas le garder dans le chemin ï¿½ faire
+						Node next = chemin.remove(0); // on enlève le noeud vers lequel on va aller pour ne pas le garder dans le chemin à faire
 						
 						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-							System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
-							// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
+							// creation d'un graphe temporaire qui oblige à chercher un autre chemin sans passer par le noeud bloqué
 							Graph tempGraph = Graphs.clone(graph);							
-							tempGraph.removeNode(next);
+							tempGraph.removeNode(next);		
 							chemin = search(tempGraph,root, opened);
 							next = chemin.remove(0);
-							
 						}
 						
 					}					

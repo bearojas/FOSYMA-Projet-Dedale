@@ -11,7 +11,6 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
 import jade.wrapper.StaleProxyException;
-import mas.agents.CleverAgent;
 import mas.agents.DummyExploAgent;
 import mas.agents.DummyWumpusAgent;
 
@@ -37,8 +36,8 @@ public class Principal {
 	public static void main(String[] args){
 
 		//0) Create the real environment and the observed one
-		env= new Environment(ENVtype.GRID_T,10,null);
-		//env= new Environment(ENVtype.DOROGOVTSEV_T,15,null);
+		//env= new Environment(ENVtype.GRID_T,10,null);
+		env= new Environment(ENVtype.DOROGOVTSEV_T,15,null);
 		//env=new Environment("ressources/map2015","ressources/map2015-config");
 		
 		//1), create the platform (Main container (DF+AMS) + containers + monitoring agents : RMA and SNIFFER)
@@ -184,7 +183,7 @@ public class Principal {
 		String agentName;
 		List<AgentController> agentList=new ArrayList<AgentController>();
 
-//		//wumpus on container0
+		//wumpus on container0
 //		c = containerList.get("container0");
 //		agentName="Golem";
 //		try {
@@ -234,7 +233,7 @@ public class Principal {
 		try {
 
 			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
+			AgentController	ag=c.createNewAgent(agentName,DummyExploAgent.class.getName(),objtab);
 			agentList.add(ag);
 			System.out.println(agentName+" launched");
 		} catch (StaleProxyException e) {
@@ -249,7 +248,7 @@ public class Principal {
 
 
 			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
+			AgentController	ag=c.createNewAgent(agentName,DummyExploAgent.class.getName(),objtab);
 			agentList.add(ag);
 			System.out.println(agentName+" launched");
 		} catch (StaleProxyException e) {
@@ -264,7 +263,7 @@ public class Principal {
 
 
 			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
+			AgentController	ag=c.createNewAgent(agentName,DummyExploAgent.class.getName(),objtab);
 			agentList.add(ag);
 			System.out.println(agentName+" launched");
 		} catch (StaleProxyException e) {
