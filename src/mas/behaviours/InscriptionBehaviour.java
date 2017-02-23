@@ -12,7 +12,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 public class InscriptionBehaviour extends OneShotBehaviour{
 	
 	/**
-	 * 
+	 * An agent registers its service (explore) with the DF
 	 */
 	private static final long serialVersionUID = 1L;
 	

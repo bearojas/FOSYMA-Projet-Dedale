@@ -14,7 +14,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 public class GetAgentBehaviour extends OneShotBehaviour {
 	
 	/**
-	 * 
+	 * An agent searches for other explorer agents through the DF 
 	 */
 	private static final long serialVersionUID = 1L;
 	
@@ -24,10 +24,10 @@ public class GetAgentBehaviour extends OneShotBehaviour {
 	@Override
 	public void action() {
 		
+		//on attend l'inscription des autres
 		try {
 			Thread.sleep(3000);
 		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		

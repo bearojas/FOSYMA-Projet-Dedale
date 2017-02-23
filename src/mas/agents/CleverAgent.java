@@ -16,7 +16,10 @@ import env.Environment;
 public class CleverAgent extends abstractAgent{
 
 	/**
-	 * 
+	 * This agent registers its service (explore) with the DF
+	 * It then proceeds to explore the environment
+	 * The agent tries to communicate with others agents, to exchange information
+	 * and to coordinate with them
 	 */
 	private static final long serialVersionUID = -1784844593772918359L;
 	private Graph graph = new SingleGraph("");
@@ -25,18 +28,10 @@ public class CleverAgent extends abstractAgent{
 	private ArrayList<AID> agentList = new ArrayList<AID>();
 
 
-public void setAgentList(ArrayList<AID> newList){
+	public void setAgentList(ArrayList<AID> newList){
 		agentList=newList;
 	}
 	
-
-	/**
-	 * This method is automatically called when "agent".start() is executed.
-	 * Consider that Agent is launched for the first time. 
-	 * 			1) set the agent attributes 
-	 *	 		2) add the behaviours
-	 *          
-	 */
 
 	protected void setup(){
 

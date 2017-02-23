@@ -13,17 +13,28 @@ import org.graphstream.graph.implementations.SingleGraph;
 
 import env.Attribute;
 import env.Couple;
+import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 public class ExchangeMapBehaviour extends SimpleBehaviour {
+	
+	/**
+	 * An agent tries to contact other agents around it, giving its position
+	 * If it gets an answer, the agent sends its current map to every agent who replied
+	 * And it merges every map received with its own  
+	 * 
+	 */
 
 	private static final long serialVersionUID = 9088209402507795289L;
-	private boolean finished = false;
 	private int state = 0;
 	private Graph myGraph ;
+	private ArrayList<AID> agentList;
 	
-	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph){
+	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph, ArrayList<AID> agentList){
 		super(myagent);
+		this.agentList = agentList;
 		myGraph = graph ;
 		myGraph.setStrict(false);
 	}
@@ -33,7 +44,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	// valeur pour chaque clé : les voisins du noeud, l'état du noeud et les observations de ce noeud
 	public HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> graphToHashmap(Graph graphToSend){
 		HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> finalMap = new HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>>();
-		//pour chaque noeud créer la clé, liste de voisins vide, et observation
+		//pour chaque noeud: créer la clé, liste de voisins vide, et observation
 		for (Node n : graphToSend){
 			finalMap.put(n.getId(), new Couple(new ArrayList(), new Couple(n.getAttribute("state"),n.getAttribute("content"))));
 		}
@@ -56,6 +67,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 			//ajout de l'attribut (modification si deja present)
 			n.addAttribute("state", entry.getValue().getRight().getLeft());
 			n.addAttribute("content", entry.getValue().getRight().getRight());
+			
 			// ajout des arcs, donc parcours des voisins 
 			for (String neighborId : entry.getValue().getLeft()){
 				// si l'arc existe deja, ne rien faire
@@ -121,25 +133,56 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	public void action() {
 		switch(state){
 		case 0:
-			// say hi
-			//envoie un message "hello ?"
-			//state ++
+			//agent says "hi" and gives its current position
+			String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+			ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+			msg.setSender(this.myAgent.getAID());
+
+			if (myPosition!=""){
+				System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
+				msg.setContent("Hi! I'm at "+myPosition);
+				
+				//on ajoute tous les agents à la liste des destinataires
+				for(AID id: agentList){
+					msg.addReceiver(id);
+				}
+				((mas.abstractAgent)this.myAgent).sendMessage(msg);
+				
+				state++;
+			}			
+			
 		case 1:
 			// regardes sa boite aux lettres et attends un message de rÃ©ponse (timeout)
-			//timeout done --> finished = true
-			// state ++
+			
+			//on attend avant de regarder la boite aux lettres? ou on fait un timeout??
+			try {
+				Thread.sleep(3000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
+			final ACLMessage answer = this.myAgent.receive(msgTemplate);
+			if (answer  != null) {		
+				System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
+				state++;
+			}else{
+				state = 4;
+			}
+			
 		case 2:
 			//convertir le graph en map spÃ©cifique a chaque agent qui a rÃ©pondu
+			//HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> mapToSend = graphToHashmap(myGraph);
+			
 			// et on le leur envoie
-			//state++
+			state++;
 		case 3:
 			// on attend les graph des autres
 			// on convertit les maps reÃ§ues en graphe
 			// et on fusionne chaque graph avec le notre 
-			// state ++ 
+			state ++;
 			
-		default:
-			finished = true;
 		}
 		
 	}
@@ -147,7 +190,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	@Override
 	public boolean done() {
 
-		return finished;
+		return state == 4;
 	}
 
 }
