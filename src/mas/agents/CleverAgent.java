@@ -1,21 +1,34 @@
 package mas.agents;
 
+import jade.core.AID;
 
-import env.Environment;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.graphstream.graph.Graph;
+import org.graphstream.graph.Node;
+import org.graphstream.graph.implementations.SingleGraph;
 
 import mas.abstractAgent;
 import mas.behaviours.*;
+import env.Environment;
 
-
-public class DummyExploAgent extends abstractAgent{
+public class CleverAgent extends abstractAgent{
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -1784844593772918359L;
+	private Graph graph = new SingleGraph("");
+	private List<Node> chemin = new ArrayList<Node>();
+	private ArrayList<String> opened = new ArrayList<String>();
+	private ArrayList<AID> agentList = new ArrayList<AID>();
 
 
-
+public void setAgentList(ArrayList<AID> newList){
+		agentList=newList;
+	}
+	
 	/**
 	 * This method is automatically called when "agent".start() is executed.
 	 * Consider that Agent is launched for the first time. 
@@ -23,6 +36,7 @@ public class DummyExploAgent extends abstractAgent{
 	 *	 		2) add the behaviours
 	 *          
 	 */
+	
 	protected void setup(){
 
 		super.setup();
@@ -41,9 +55,9 @@ public class DummyExploAgent extends abstractAgent{
 		doWait(2000);
 		
 		//Add the behaviours
-		//addBehaviour(new RandomWalkBehaviour(this));
-		//addBehaviour(new ExploreBehaviour(this));
-		//addBehaviour(new SayHello(this));
+		addBehaviour(new InscriptionBehaviour(this));
+		addBehaviour(new GetAgentBehaviour(this));
+		addBehaviour(new ExploreBehaviour(this, graph, chemin, opened));
 
 		System.out.println("the agent "+this.getLocalName()+ " is started");
 
