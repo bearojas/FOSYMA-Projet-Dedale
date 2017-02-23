@@ -13,10 +13,10 @@ import org.graphstream.algorithm.Dijkstra;
 
 import env.Attribute;
 import env.Couple;
-import jade.core.behaviours.Behaviour;
+import jade.core.behaviours.SimpleBehaviour;
 
 
-public class ExploreBehaviour extends Behaviour {
+public class ExploreBehaviour extends SimpleBehaviour {
 	
 	private static final long serialVersionUID = 9088209402507795289L;
 	private boolean finished = false;
