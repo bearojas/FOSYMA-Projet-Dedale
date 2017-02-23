@@ -29,6 +29,7 @@ public void setAgentList(ArrayList<AID> newList){
 		agentList=newList;
 	}
 	
+
 	/**
 	 * This method is automatically called when "agent".start() is executed.
 	 * Consider that Agent is launched for the first time. 
@@ -36,7 +37,7 @@ public void setAgentList(ArrayList<AID> newList){
 	 *	 		2) add the behaviours
 	 *          
 	 */
-	
+
 	protected void setup(){
 
 		super.setup();

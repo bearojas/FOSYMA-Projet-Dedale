@@ -29,17 +29,17 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	}
 	
 	// fonction de transformation d'un graphe vers une HashMap
-	// clï¿½ de la HashMap : identifiant du noeud
-	// valeur pour chaque clï¿½ : les voisins du noeud, l'ï¿½tat du noeud et les observations de ce noeud
+	// clé de la HashMap : identifiant du noeud
+	// valeur pour chaque clé : les voisins du noeud, l'état du noeud et les observations de ce noeud
 	public HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> graphToHashmap(Graph graphToSend){
 		HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> finalMap = new HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>>();
-		//pour chaque noeud crï¿½er la clï¿½, liste de voisins vide, et observation
+		//pour chaque noeud créer la clé, liste de voisins vide, et observation
 		for (Node n : graphToSend){
 			finalMap.put(n.getId(), new Couple(new ArrayList(), new Couple(n.getAttribute("state"),n.getAttribute("content"))));
 		}
-		//pour chaque arc, on rï¿½cupï¿½re le noeud source #e.getNode0()#,
-		//dans la hashMap ï¿½ cette clï¿½ on rï¿½cupï¿½re la liste des voisins #getLeft()#
-		//et on y insï¿½re le noeud destination #add(e.getNode1())#
+		//pour chaque arc, on récupère le noeud source #e.getNode0()#,
+		//dans la hashMap à cette clé on récupère la liste des voisins #getLeft()#
+		//et on y insère le noeud destination #add(e.getNode1())#
 		for(Edge e : graphToSend.getEachEdge()){
 			finalMap.get(e.getNode0().getId()).getLeft().add(e.getNode1().getId());
 		}
@@ -100,6 +100,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 								old_obs.get(i).setValue(a.getValue());
 							}
 						}
+
 					}
 						
 				}
