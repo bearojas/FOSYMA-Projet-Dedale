@@ -1,5 +1,7 @@
 package mas.behaviours;
 
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +19,7 @@ import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import jade.lang.acl.UnreadableException;
 
 public class ExchangeMapBehaviour extends SimpleBehaviour {
 	
@@ -31,10 +34,13 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	private int state = 0;
 	private Graph myGraph ;
 	private ArrayList<AID> agentList;
+	private ArrayList <Couple<AID, String>> receivers;
+	private int nbanswers = 0;
 	
 	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph, ArrayList<AID> agentList){
 		super(myagent);
 		this.agentList = agentList;
+		receivers = new ArrayList <Couple<AID, String>>();
 		myGraph = graph ;
 		myGraph.setStrict(false);
 	}
@@ -133,15 +139,19 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	public void action() {
 		switch(state){
 		case 0:
-			//agent says "hi" and gives its current position
+			//agent gives its current position
 			String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 			ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 			msg.setSender(this.myAgent.getAID());
 
 			if (myPosition!=""){
 				System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
-				msg.setContent("Hi! I'm at "+myPosition);
-				
+				try {
+					msg.setContentObject( myPosition);
+				} catch (IOException e) {
+					System.out.println("IOException: could not create the message with myPosition ");
+					e.printStackTrace();
+				}
 				//on ajoute tous les agents � la liste des destinataires
 				for(AID id: agentList){
 					msg.addReceiver(id);
@@ -154,34 +164,77 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		case 1:
 			// regardes sa boite aux lettres et attends un message de réponse (timeout)
 			
-			//on attend avant de regarder la boite aux lettres? ou on fait un timeout??
-			try {
-				Thread.sleep(3000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
 			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
 			final ACLMessage answer = this.myAgent.receive(msgTemplate);
-			if (answer  != null) {		
+			
+			if (answer  != null) {
+				nbanswers++;
 				System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
-				state++;
-			}else{
-				state = 4;
+				try {
+					String pos = (String) answer.getContentObject();
+					receivers.add(new Couple((AID) answer.getSender(), pos));
+				} catch (UnreadableException e) {
+					e.printStackTrace();
+				}
+
+			}else{// A MODIFIER
+				// si limite de r�ponses attendues atteint 
+				if(nbanswers >= agentList.size()){
+					state++;
+					nbanswers = 0;
+				}				
+				else
+					block(1000);
 			}
 			
 		case 2:
-			//convertir le graph en map spécifique a chaque agent qui a répondu
-			//HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> mapToSend = graphToHashmap(myGraph);
-			
-			// et on le leur envoie
+			//convertir le graph en map spécifique a chaque agent qui a répondu et l'envoyer
+			for(Couple<AID, String> c : receivers){
+				ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
+				mapMsg.setSender(this.myAgent.getAID());
+				mapMsg.addReceiver(c.getLeft());
+				HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> mapToSend = graphToHashmap(myGraph);
+				
+				try {
+					mapMsg.setContentObject(mapToSend);
+				} catch (IOException e) {
+					System.out.println("could not create the message with mapToSend");
+					e.printStackTrace();
+				}
+				((mas.abstractAgent)this.myAgent).sendMessage(mapMsg);
+				
+			}
 			state++;
+			
 		case 3:
 			// on attend les graph des autres
 			// on convertit les maps reçues en graphe
-			// et on fusionne chaque graph avec le notre 
-			state ++;
+			// et on fusionne chaque graph avec le notre
+			final MessageTemplate msgTemp = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
+			final ACLMessage mapReceived = this.myAgent.receive(msgTemp);
+			
+			if (mapReceived != null) {
+				nbanswers++;
+				System.out.println(this.myAgent.getLocalName()+"<----Result received a map from "+mapReceived.getSender().getLocalName());
+				try {
+					HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> hmap;
+					hmap = (HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>>) mapReceived.getContentObject();
+					Graph receivedGraph = hashmapToGraph(hmap);
+					graphsFusion(receivedGraph);
+					
+				} catch (UnreadableException e) {
+					e.printStackTrace();
+				}
+				
+
+			}else{// A MODIFIER
+				// si limite de r�ponses attendues atteint 
+				if(nbanswers >= agentList.size()){
+					state++;
+				}				
+				else
+					block(1000);
+			}
 			
 		}
 		
@@ -189,7 +242,6 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 
 	@Override
 	public boolean done() {
-
 		return state == 4;
 	}
 
