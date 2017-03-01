@@ -1,19 +1,21 @@
 package mas.behaviours;
 
+import jade.core.behaviours.SimpleBehaviour;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import mas.agents.CleverAgent;
+
+import org.graphstream.algorithm.Dijkstra;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.Path;
 import org.graphstream.graph.implementations.Graphs;
-import org.graphstream.graph.implementations.SingleGraph;
-import org.graphstream.algorithm.Dijkstra;
 
 import env.Attribute;
 import env.Couple;
-import jade.core.behaviours.SimpleBehaviour;
 
 
 public class ExploreBehaviour extends SimpleBehaviour {
@@ -217,6 +219,12 @@ public class ExploreBehaviour extends SimpleBehaviour {
 		
 	}
 	
+	
+	public void refreshAgent(){
+		((CleverAgent) super.myAgent).setGraph(graph);
+		((CleverAgent) super.myAgent).setChemin(chemin);
+		((CleverAgent) super.myAgent).setOpened(opened);
+	}
 	
 	@Override
 	public boolean done() {

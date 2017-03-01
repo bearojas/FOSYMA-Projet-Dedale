@@ -26,6 +26,41 @@ public class CleverAgent extends abstractAgent{
 	private List<Node> chemin = new ArrayList<Node>();
 	private ArrayList<String> opened = new ArrayList<String>();
 	private ArrayList<AID> agentList = new ArrayList<AID>();
+	
+	public Graph getGraph() {
+		return graph;
+	}
+
+
+	public void setGraph(Graph graph) {
+		this.graph = graph;
+	}
+
+
+	public List<Node> getChemin() {
+		return chemin;
+	}
+
+
+	public void setChemin(List<Node> chemin) {
+		this.chemin = chemin;
+	}
+
+
+	public ArrayList<String> getOpened() {
+		return opened;
+	}
+
+
+	public void setOpened(ArrayList<String> opened) {
+		this.opened = opened;
+	}
+
+
+	public ArrayList<AID> getAgentList() {
+		return agentList;
+	}
+
 
 
 	public void setAgentList(ArrayList<AID> newList){
@@ -53,7 +88,7 @@ public class CleverAgent extends abstractAgent{
 		//Add the behaviours
 		addBehaviour(new InscriptionBehaviour(this));
 		addBehaviour(new GetAgentBehaviour(this));
-		addBehaviour(new ExploreBehaviour(this, graph, chemin, opened));
+		addBehaviour(new MainBehaviour(this));
 
 		System.out.println("the agent "+this.getLocalName()+ " is started");
 
