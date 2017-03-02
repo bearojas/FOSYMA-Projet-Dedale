@@ -43,7 +43,7 @@ public class GetAgentBehaviour extends OneShotBehaviour {
 			}
 			((CleverAgent)super.myAgent).setAgentList(agentList);
 			
-			//System.out.println("liste d'agents:"+agentList.toString());
+			//System.out.println("liste d'agents1:"+((CleverAgent)super.myAgent).getAgentList().toString());
 			
 		} catch (FIPAException e) {
 			e.printStackTrace();

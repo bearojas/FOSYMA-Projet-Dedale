@@ -25,6 +25,8 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private Graph graph ;
 	private List<Node> chemin;
 	private ArrayList<String> opened ;
+	private int step=0;
+	private final int MAX_STEP = 5;
 	
 	public ExploreBehaviour(final mas.abstractAgent myagent, Graph graph, List<Node> chemin, ArrayList<String> opened){
 		super(myagent);
@@ -118,7 +120,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				}
 			}
 
-			System.out.println("noeuds ouverts: "+opened.toString());
+//			System.out.println("noeuds ouverts: "+opened.toString());
 			
 			//Little pause to allow you to follow what is going on
 			try {
@@ -151,74 +153,81 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				List<Couple<String,List<Attribute>>> lobs2=((mas.abstractAgent)this.myAgent).observe();//myPosition
 				System.out.println("lobs after picking "+lobs2);
 			}
-			//si on n'a plus de noeuds ouverts, l'exploration est finie
-			if(opened.isEmpty()){
-				finished = true;
-				System.out.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
-			}
-			else{
-				//si on a un chemin a suivre
-				if(chemin.size() != 0){
-					Node next = chemin.remove(0);
-					// tant qu'on n'a pas pu se dï¿½placer....
-					while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-						// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
-						System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
-						
-						Graph tempGraph = Graphs.clone(graph);
-						tempGraph.removeNode(next);	
-						chemin = search(tempGraph,root, opened);
-						next = chemin.remove(0);
-						
-					}
+			//tous les MAX_STEP temps, on échange la map a ceux proches de nous
+			if(step>=MAX_STEP){
+				step=0;
+				finished=true ;
+				System.out.println("COMMUNICATION TIME for "+myAgent.getName());
+			} else {
+				//si on n'a plus de noeuds ouverts, l'exploration est finie
+				if(opened.isEmpty()){
+					step=0;
+					finished = true;
+					System.out.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
 				}
 				else{
-					//si on a un voisin ouvert 
-					if(neighbors.size()!= 0){
-						System.out.println("VOISINS "+neighbors.toString());
-						int i =0 ;
-						Node next = graph.getNode(neighbors.get(i));
-						System.out.println("Je vais en "+ next.getId());
-						// si on ne peut pas aller vers son voisin
-						// soit on prend le voisin suivant
-						// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin
+					step++;
+					//si on a un chemin a suivre
+					if(chemin.size() != 0){
+						Node next = chemin.remove(0);
+						// tant qu'on n'a pas pu se dï¿½placer....
 						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-							i++ ;
-							if( i >= neighbors.size()){
-								chemin = search(graph, root, opened);
-								next = chemin.remove(0);
-							} else {
-								next =graph.getNode(neighbors.get(i));
-								//graph.a
-							}
-						}
-						
-					}
-					else{
-						// si pas de voisins
-						//on cherche le noeud le plus proche						
-						chemin = search(graph, root, opened);
-						Node next = chemin.remove(0); // on enlï¿½ve le noeud vers lequel on va aller pour ne pas le garder dans le chemin ï¿½ faire
-						
-						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-							System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
 							// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
-							Graph tempGraph = Graphs.clone(graph);							
-							tempGraph.removeNode(next);
+							System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
+							
+							Graph tempGraph = Graphs.clone(graph);
+							tempGraph.removeNode(next);	
 							chemin = search(tempGraph,root, opened);
 							next = chemin.remove(0);
 							
 						}
-						
-					}					
+					}
+					else{
+						//si on a un voisin ouvert 
+						if(neighbors.size()!= 0){
+//							System.out.println("VOISINS "+neighbors.toString());
+							int i =0 ;
+							Node next = graph.getNode(neighbors.get(i));
+							System.out.println("Je vais en "+ next.getId());
+							// si on ne peut pas aller vers son voisin
+							// soit on prend le voisin suivant
+							// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin
+							while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
+								i++ ;
+								if( i >= neighbors.size()){
+									chemin = search(graph, root, opened);
+									next = chemin.remove(0);
+								} else {
+									next =graph.getNode(neighbors.get(i));
+									//graph.a
+								}
+							}
+							
+						}
+						else{
+							// si pas de voisins
+							//on cherche le noeud le plus proche						
+							chemin = search(graph, root, opened);
+							Node next = chemin.remove(0); // on enlï¿½ve le noeud vers lequel on va aller pour ne pas le garder dans le chemin ï¿½ faire
+							
+							while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
+								System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
+								// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
+								Graph tempGraph = Graphs.clone(graph);							
+								tempGraph.removeNode(next);
+								chemin = search(tempGraph,root, opened);
+								next = chemin.remove(0);
+								
+							}
+							
+						}					
+					}
+	
 				}
-
 			}
-			
 		}
 		
 	}
-	
 	
 	public void refreshAgent(){
 		((CleverAgent) super.myAgent).setGraph(graph);
