@@ -1,11 +1,9 @@
 package mas.behaviours;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import org.graphstream.graph.Edge;
@@ -14,12 +12,13 @@ import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
 
 import env.Attribute;
-import env.Couple;
 import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
+import mas.agents.CleverAgent;
+import mas.agents.Data;
 
 public class ExchangeMapBehaviour extends SimpleBehaviour {
 	
@@ -33,27 +32,30 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	private static final long serialVersionUID = 9088209402507795289L;
 	private int state = 0;
 	private Graph myGraph ;
-	private ArrayList<AID> agentList;
 	private ArrayList <AID> receivers;
 	private final int nbWaitAnswer = 5;
 	private int cptWait = 0;
 	
-	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph, ArrayList<AID> agentList){
+	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph){
 		super(myagent);
-		this.agentList = agentList;
 		receivers = new ArrayList <AID>();
 		myGraph = graph ;
 		myGraph.setStrict(false);
 	}
 	
-	// fonction de transformation d'un graphe vers une HashMap
-	// cl� de la HashMap : identifiant du noeud
-	// valeur pour chaque cl� : les voisins du noeud, l'�tat du noeud et les observations de ce noeud
-	public HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> graphToHashmap(Graph graphToSend){
-		HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> finalMap = new HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>>();
+	/**
+	 *  fonction de transformation d'un graphe vers une HashMap
+	 *  cl� de la HashMap : identifiant du noeud
+	 *  valeur pour chaque cl� : les voisins du noeud, l'�tat du noeud et les observations de ce noeud	
+	 * @param graphToSend graph to send to other agents
+	 * @return a hashmap representing the graph
+	 */
+	//
+	public HashMap<String,Data<List<String>,String, List<Attribute>>> graphToHashmap(Graph graphToSend){
+		HashMap<String,Data<List<String>,String, List<Attribute>>> finalMap = new HashMap<String,Data<List<String>,String, List<Attribute>>>();
 		//pour chaque noeud: cr�er la cl�, liste de voisins vide, et observation
 		for (Node n : graphToSend){
-			finalMap.put(n.getId(), new Couple(new ArrayList(), new Couple(n.getAttribute("state"),n.getAttribute("content"))));
+			finalMap.put(n.getId(), new Data(new ArrayList(), n.getAttribute("state"),n.getAttribute("content")));
 		}
 		//pour chaque arc, on r�cup�re le noeud source #e.getNode0()#,
 		//dans la hashMap � cette cl� on r�cup�re la liste des voisins #getLeft()#
@@ -64,16 +66,20 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		return finalMap;
 	}
 	
-	//fonction de transformation d'une HashMap vers un graphe
-	public Graph hashmapToGraph(HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> hMapReceived){
+	/**
+	 * fonction de transformation d'une HashMap vers un graphe
+	 * @param hMapReceived
+	 * @return a graph created from the map
+	 */
+	public Graph hashmapToGraph(HashMap<String, Data<List<String>,String, List<Attribute>>> hMapReceived){
 		Graph finalGraph = new SingleGraph("");
 		finalGraph.setStrict(false);
-		for (Entry<String, Couple<List<String>, Couple<String, List<Attribute>>>> entry : hMapReceived.entrySet()){
+		for (Entry<String, Data<List<String>,String, List<Attribute>>> entry : hMapReceived.entrySet()){
 			//creation du noeud (si il existe deja retourne le noeud existant) 
 			Node n = finalGraph.addNode(entry.getKey()) ;
 			//ajout de l'attribut (modification si deja present)
-			n.addAttribute("state", entry.getValue().getRight().getLeft());
-			n.addAttribute("content", entry.getValue().getRight().getRight());
+			n.addAttribute("state", entry.getValue().getMid());
+			n.addAttribute("content", entry.getValue().getRight());
 			
 			// ajout des arcs, donc parcours des voisins 
 			for (String neighborId : entry.getValue().getLeft()){
@@ -87,7 +93,10 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		return finalGraph ;
 	}
 	
-	// fonction permettant de concatener 2 graphes, et donc de mettre � jour ses informations
+	/**
+	 * fonction permettant de concatener 2 graphes, et donc de mettre � jour ses informations 
+	 * @param graphReceived
+	 */
 	public void graphsFusion(Graph graphReceived){
 		for (Node n : graphReceived){
 			Node old_node = myGraph.getNode(n.getId());
@@ -140,18 +149,20 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	public void action() {
 		switch(state){
 		case 0:
-			//agent gives its current position
+			//agent gives its current position	
 			String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 			ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 			msg.setSender(this.myAgent.getAID());
-
 			if (myPosition!=""){
 				System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
 				msg.setContent(myPosition);
 
 				//on ajoute tous les agents � la liste des destinataires
-				for(AID id: agentList){
-					msg.addReceiver(id);
+				for(AID id: ((CleverAgent)super.myAgent).getAgentList()){
+					if(!id.equals(super.myAgent.getAID())){ // pour ne pas s'envoyer des messages � soi meme
+						msg.addReceiver(id);
+
+					}
 				}
 				((mas.abstractAgent)this.myAgent).sendMessage(msg);
 				
@@ -159,7 +170,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 			}			
 			
 		case 1:
-			// regardes sa boite aux lettres et attends un message de réponse (timeout)
+			// regarde sa boite aux lettres et attends un message de réponse (timeout)
 			
 			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
 			final ACLMessage answer = this.myAgent.receive(msgTemplate);
@@ -170,8 +181,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 
 			}else{
 				// si limite de r�ponses attendues atteint 
-				if(receivers.size() >= agentList.size()){
+				if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
 					state++;
+					cptWait=0;
 				}
 				else{
 					if(cptWait >= nbWaitAnswer){
@@ -182,9 +194,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						block(1000);
 						cptWait++;
 					}
-				}
-					
-					
+				}							
 			}
 			
 		case 2:
@@ -193,7 +203,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
 				mapMsg.setSender(this.myAgent.getAID());
 				mapMsg.addReceiver(c);
-				HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> mapToSend = graphToHashmap(myGraph);
+				HashMap<String,Data<List<String>,String, List<Attribute>>> mapToSend = graphToHashmap(myGraph);
 				
 				try {
 					mapMsg.setContentObject(mapToSend);
@@ -216,8 +226,8 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 			if (mapReceived != null) {
 				System.out.println(this.myAgent.getLocalName()+"<----Result received a map from "+mapReceived.getSender().getLocalName());
 				try {
-					HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> hmap;
-					hmap = (HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>>) mapReceived.getContentObject();
+					HashMap<String, Data<List<String>, String, List<Attribute>>> hmap;
+					hmap = (HashMap<String, Data<List<String>, String, List<Attribute>>>) mapReceived.getContentObject();
 					Graph receivedGraph = hashmapToGraph(hmap);
 					graphsFusion(receivedGraph);
 					receivers.remove(mapReceived.getSender());
@@ -229,10 +239,14 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 			}else{
 				// si limite de r�ponses attendues atteint 
 				if( receivers.isEmpty()){
+					refreshAgent();
+					cptWait=0;
 					state++;
 				}
 				else{
 					if(cptWait >= nbWaitAnswer){
+						refreshAgent();
+						cptWait=0;
 						state++;
 					}
 					else{
@@ -240,11 +254,12 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						cptWait++;
 					}
 				}
-			}
-				
-			
-		}
-		
+			}				
+		}		
+	}
+	
+	public void refreshAgent(){
+		((CleverAgent) super.myAgent).setGraph(myGraph);
 	}
 
 	@Override

@@ -1,6 +1,7 @@
 package mas.agents;
 
 import jade.core.AID;
+import jade.core.behaviours.FSMBehaviour;
 
 import java.util.ArrayList;
 import java.util.List;
