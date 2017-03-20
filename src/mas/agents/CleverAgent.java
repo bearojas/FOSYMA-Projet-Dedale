@@ -25,6 +25,7 @@ public class CleverAgent extends abstractAgent{
 	private static final long serialVersionUID = -1784844593772918359L;
 	private Graph graph = new SingleGraph("");
 	private List<Node> chemin = new ArrayList<Node>();
+	private ArrayList<AID> agentsNearby = new ArrayList<AID>();
 	private ArrayList<String> opened = new ArrayList<String>();
 	private ArrayList<AID> agentList = new ArrayList<AID>();
 	
@@ -32,37 +33,37 @@ public class CleverAgent extends abstractAgent{
 		return graph;
 	}
 
-
 	public void setGraph(Graph graph) {
 		this.graph = graph;
 	}
-
 
 	public List<Node> getChemin() {
 		return chemin;
 	}
 
-
 	public void setChemin(List<Node> chemin) {
 		this.chemin = chemin;
 	}
+	
+	public ArrayList<AID> getAgentsNearby() {
+		return agentsNearby;
+	}
 
+	public void setAgentsNearby(ArrayList<AID> agentsNearby) {
+		this.agentsNearby = agentsNearby;
+	}
 
 	public ArrayList<String> getOpened() {
 		return opened;
 	}
 
-
 	public void setOpened(ArrayList<String> opened) {
 		this.opened = opened;
 	}
 
-
 	public ArrayList<AID> getAgentList() {
 		return agentList;
 	}
-
-
 
 	public void setAgentList(ArrayList<AID> newList){
 		agentList=newList;

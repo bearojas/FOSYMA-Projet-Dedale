@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 
+import javax.swing.SingleSelectionModel;
+
 import org.graphstream.graph.Edge;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
@@ -30,18 +32,30 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	 */
 
 	private static final long serialVersionUID = 9088209402507795289L;
-	private int state = 0;
+	private int state;
 	private Graph myGraph ;
 	private ArrayList <AID> receivers;
 	private final int nbWaitAnswer = 5;
 	private int cptWait = 0;
 	
-	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph){
+	public ExchangeMapBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
 		receivers = new ArrayList <AID>();
-		myGraph = graph ;
+		myGraph = ((CleverAgent) myagent).getGraph();
+		state = 0;
+		myGraph.setStrict(false);
+	}	
+	
+	public ExchangeMapBehaviour(final mas.abstractAgent myagent, int state){
+		super(myagent);
+		receivers = ((CleverAgent) myagent).getAgentsNearby();
+		((CleverAgent) myagent).setAgentsNearby(new ArrayList<AID>());
+		myGraph = ((CleverAgent) myagent).getGraph();
+		this.state = state;
 		myGraph.setStrict(false);
 	}
+	
+
 	
 	/**
 	 *  fonction de transformation d'un graphe vers une HashMap
@@ -50,7 +64,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	 * @param graphToSend graph to send to other agents
 	 * @return a hashmap representing the graph
 	 */
-	//
+	
 	public HashMap<String,Data<List<String>,String, List<Attribute>>> graphToHashmap(Graph graphToSend){
 		HashMap<String,Data<List<String>,String, List<Attribute>>> finalMap = new HashMap<String,Data<List<String>,String, List<Attribute>>>();
 		//pour chaque noeud: cr�er la cl�, liste de voisins vide, et observation
@@ -68,13 +82,13 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	
 	/**
 	 * fonction de transformation d'une HashMap vers un graphe
-	 * @param hMapReceived
+	 * @param receivedHmap
 	 * @return a graph created from the map
 	 */
-	public Graph hashmapToGraph(HashMap<String, Data<List<String>,String, List<Attribute>>> hMapReceived){
+	public Graph hashmapToGraph(HashMap<String, Data<List<String>,String, List<Attribute>>> receivedHmap){
 		Graph finalGraph = new SingleGraph("");
 		finalGraph.setStrict(false);
-		for (Entry<String, Data<List<String>,String, List<Attribute>>> entry : hMapReceived.entrySet()){
+		for (Entry<String, Data<List<String>,String, List<Attribute>>> entry : receivedHmap.entrySet()){
 			//creation du noeud (si il existe deja retourne le noeud existant) 
 			Node n = finalGraph.addNode(entry.getKey()) ;
 			//ajout de l'attribut (modification si deja present)
@@ -95,10 +109,10 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	
 	/**
 	 * fonction permettant de concatener 2 graphes, et donc de mettre � jour ses informations 
-	 * @param graphReceived
+	 * @param receivedGraph
 	 */
-	public void graphsFusion(Graph graphReceived){
-		for (Node n : graphReceived){
+	public void graphsFusion(Graph receivedGraph){
+		for (Node n : receivedGraph){
 			Node old_node = myGraph.getNode(n.getId());
 			// si on ignorait l'existence de ce noeud, on l'ajoute � notre graphe ainsi que ses attributs
 			if (old_node == null){
@@ -134,8 +148,8 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				}
 			}
 			
-			// on parcourt tous les arcs du graphReceived
-			for(Edge e : graphReceived.getEachEdge()){
+			// on parcourt tous les arcs du receivedGraph
+			for(Edge e : receivedGraph.getEachEdge()){
 				String id0 = e.getNode0().getId();
 				String id1 = e.getNode1().getId();
 				//si l'arc n'existe pas, on l'ajoute 
@@ -147,114 +161,151 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	
 	@Override
 	public void action() {
+		
+		System.out.println("Agent "+this.myAgent.getLocalName()+" state: "+state);
+		
 		switch(state){
-		case 0:
-			//agent gives its current position	
-			String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
-			ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-			msg.setSender(this.myAgent.getAID());
-			if (myPosition!=""){
-				System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
-				msg.setContent(myPosition);
-
-				//on ajoute tous les agents � la liste des destinataires
-				for(AID id: ((CleverAgent)super.myAgent).getAgentList()){
-					if(!id.equals(super.myAgent.getAID())){ // pour ne pas s'envoyer des messages � soi meme
-						msg.addReceiver(id);
-
-					}
-				}
-				((mas.abstractAgent)this.myAgent).sendMessage(msg);
+			case 0:
+				//agent gives its current position	
+				String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+				ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+				msg.setSender(this.myAgent.getAID());
 				
-				state++;
-			}			
-			
-		case 1:
-			// regarde sa boite aux lettres et attends un message de réponse (timeout)
-			
-			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
-			final ACLMessage answer = this.myAgent.receive(msgTemplate);
-			
-			if (answer  != null) {
-				System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
-				receivers.add((AID) answer.getSender());
-
-			}else{
-				// si limite de r�ponses attendues atteint 
-				if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
+				if (myPosition!=""){
+					System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
+					msg.setContent(myPosition);
+	
+					//on ajoute tous les agents � la liste des destinataires
+					for(AID id: ((CleverAgent)super.myAgent).getAgentList()){
+						msg.addReceiver(id);				
+					}
+					((mas.abstractAgent)this.myAgent).sendMessage(msg);
+					
+					
 					state++;
-					cptWait=0;
-				}
-				else{
-					if(cptWait >= nbWaitAnswer){
-						state++;
-						cptWait = 0;
+					break;
+				}			
+				
+			case 1:
+				// regarde sa boite aux lettres et attends un message de réponse (timeout)
+				
+				final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
+				final ACLMessage answer = this.myAgent.receive(msgTemplate);
+				
+				if (answer  != null) {
+					System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
+					receivers.add((AID) answer.getSender());
+	
+				}else{
+					// si limite de r�ponses attendues atteint 
+					if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
+						state=3;
+						cptWait=0;
+					}
+					// si temps d'attente atteint
+					else if(cptWait >= nbWaitAnswer){
+						if(receivers.isEmpty()){
+							state = 5;
+						}
+						else{
+							state = 3;
+							cptWait = 0;
+						}
 					}
 					else{
 						block(1000);
 						cptWait++;
 					}
-				}							
-			}
-			
-		case 2:
-			//convertir le graph en map spécifique a chaque agent qui a répondu et l'envoyer
-			for(AID c : receivers){
-				ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
-				mapMsg.setSender(this.myAgent.getAID());
-				mapMsg.addReceiver(c);
-				HashMap<String,Data<List<String>,String, List<Attribute>>> mapToSend = graphToHashmap(myGraph);
-				
-				try {
-					mapMsg.setContentObject(mapToSend);
-				} catch (IOException e) {
-					System.out.println("could not create the message with mapToSend");
-					e.printStackTrace();
+												
 				}
-				((mas.abstractAgent)this.myAgent).sendMessage(mapMsg);
+				break;
 				
-			}
-			state++;
-			
-		case 3:
-			// on attend les graph des autres
-			// on convertit les maps reçues en graphe
-			// et on fusionne chaque graph avec le notre
-			final MessageTemplate msgTemp = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
-			final ACLMessage mapReceived = this.myAgent.receive(msgTemp);
-			
-			if (mapReceived != null) {
-				System.out.println(this.myAgent.getLocalName()+"<----Result received a map from "+mapReceived.getSender().getLocalName());
-				try {
-					HashMap<String, Data<List<String>, String, List<Attribute>>> hmap;
-					hmap = (HashMap<String, Data<List<String>, String, List<Attribute>>>) mapReceived.getContentObject();
-					Graph receivedGraph = hashmapToGraph(hmap);
-					graphsFusion(receivedGraph);
-					receivers.remove(mapReceived.getSender());
-				} catch (UnreadableException e) {
-					e.printStackTrace();
-				}
+			case 2:
+				//agent gives its current position	
+				String myPos=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+				ACLMessage msge = new ACLMessage(ACLMessage.INFORM);
+				msge.setSender(this.myAgent.getAID());
 				
-
-			}else{
-				// si limite de r�ponses attendues atteint 
-				if( receivers.isEmpty()){
-					refreshAgent();
-					cptWait=0;
+				if (myPos!=""){
+					System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach "+receivers.toString());
+					msge.setContent(myPos);
+	
+					//on ajoute tous les agents 
+					for(AID id: receivers){
+						msge.addReceiver(id);				
+					}
+					((mas.abstractAgent)this.myAgent).sendMessage(msge);
+					
 					state++;
 				}
-				else{
-					if(cptWait >= nbWaitAnswer){
+				break;
+				
+			case 3:
+				//convertir le graph en map spécifique a chaque agent qui a répondu et l'envoyer
+				for(AID c : receivers){
+					ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
+					mapMsg.setSender(this.myAgent.getAID());
+					mapMsg.addReceiver(c);
+					HashMap<String,Data<List<String>,String, List<Attribute>>> mapToSend = graphToHashmap(myGraph);
+					
+					System.out.println("Agent "+this.myAgent.getLocalName()+" sends "+mapToSend.toString());
+					
+					try {
+						mapMsg.setContentObject(mapToSend);
+					} catch (IOException e) {
+						System.out.println("could not create the message with mapToSend");
+						e.printStackTrace();
+					}
+					((mas.abstractAgent)this.myAgent).sendMessage(mapMsg);
+					
+				}
+				state++;
+				break;
+				
+			case 4:
+				// on attend les graph des autres
+				// on convertit les maps reçues en graphe
+				// et on fusionne chaque graph avec le notre
+				final MessageTemplate msgTemp = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
+				final ACLMessage receivedMap = this.myAgent.receive(msgTemp);
+				
+				if (receivedMap != null) {
+					System.out.println(this.myAgent.getLocalName()+"<----Result received a map from "+receivedMap.getSender().getLocalName());
+					try {
+						HashMap<String, Data<List<String>, String, List<Attribute>>> hmap;		
+						hmap = (HashMap<String, Data<List<String>, String, List<Attribute>>>) receivedMap.getContentObject();
+						
+						System.out.println("Agent "+this.myAgent.getLocalName()+"received a map");
+						
+						Graph receivedGraph = hashmapToGraph(hmap);
+						graphsFusion(receivedGraph);
+						receivers.remove(receivedMap.getSender());
+					} catch (UnreadableException e) {
+						e.printStackTrace();
+					}
+					
+	
+				}else{
+					// si limite de r�ponses attendues atteint 
+					if( receivers.isEmpty()){
 						refreshAgent();
 						cptWait=0;
 						state++;
 					}
 					else{
-						block(1000);
-						cptWait++;
+						if(cptWait >= nbWaitAnswer){
+							refreshAgent();
+							cptWait=0;
+							state++;
+						}
+						else{
+							block(1000);
+							cptWait++;
+						}
 					}
-				}
-			}				
+				}break;
+				
+			default: break;
 		}		
 	}
 	
@@ -264,7 +315,11 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 
 	@Override
 	public boolean done() {
-		return state == 4;
+		if(state == 5){
+			state = 0;
+			return true;
+		}
+		return false;
 	}
 
 }

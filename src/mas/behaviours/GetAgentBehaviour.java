@@ -39,7 +39,8 @@ public class GetAgentBehaviour extends OneShotBehaviour {
 			DFAgentDescription[] result = DFService.search(super.myAgent, dfd);
 			ArrayList<AID> agentList = new ArrayList<AID>();
 			for (DFAgentDescription ad : result){
-				agentList.add(ad.getName());
+				if(!ad.getName().equals(this.myAgent.getAID()))
+					agentList.add(ad.getName());
 			}
 			((CleverAgent)super.myAgent).setAgentList(agentList);
 			

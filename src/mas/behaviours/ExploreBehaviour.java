@@ -1,6 +1,9 @@
 package mas.behaviours;
 
+import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,15 +28,16 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private Graph graph ;
 	private List<Node> chemin;
 	private ArrayList<String> opened ;
-	private int step=0;
-	private final int MAX_STEP = 5;
+	private int step = 0;
+	private final int MAX_STEP = 3;
+	private int exitValue = 0;
 	
-	public ExploreBehaviour(final mas.abstractAgent myagent, Graph graph, List<Node> chemin, ArrayList<String> opened){
+	public ExploreBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
-		this.graph = graph;
-		this.opened = opened;
-		this.chemin = chemin;
-		//atention: cache l'exception IdAlreadyInUse
+		graph = ((CleverAgent) myagent).getGraph();
+		opened = ((CleverAgent) myagent).getOpened();
+		chemin = ((CleverAgent) myagent).getChemin();
+		//attention: cache l'exception IdAlreadyInUse
 		this.graph.setStrict(false);
 	}
 	
@@ -57,17 +61,17 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				shortest = dijk.getPath(myGraph.getNode(id));
 			}
 		}	
-		List<Node> shortPath=shortest.getNodePath();
+		List<Node> shortPath = shortest.getNodePath();
 		shortPath.remove(0);
 		return shortPath ;
 	}
 
 	
+	
 	@Override
 	public void action() {
 	
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
-
 		
 		if (myPosition!=""){
 
@@ -92,15 +96,15 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			
 			System.out.println(this.myAgent.getLocalName()+" -- list of observables: "+lobs);
 			
-			// create root node
-			//  delete current node from opened
+			// create node from current position
+			// delete current node from opened
 			Node root = graph.addNode(myPosition);
 			root.addAttribute("state", "closed");
 			root.addAttribute("content",lattribute);
 			opened.remove(myPosition);
 			
-			//on ajoute tous les voisins du noeud courant
-			//on les ajoute a la liste des ouverts s'il ne sont pas deja fermes
+			//add all neighbors of current node 
+			//add them to Opened if not already closed 
 			ArrayList<String> neighbors = new ArrayList<String>();
 			
 			for(int i=0; i < lobs.size(); i++){
@@ -153,15 +157,32 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				List<Couple<String,List<Attribute>>> lobs2=((mas.abstractAgent)this.myAgent).observe();//myPosition
 				System.out.println("lobs after picking "+lobs2);
 			}
-			//tous les MAX_STEP temps, on échange la map a ceux proches de nous
-			if(step>=MAX_STEP){
-				step=0;
-				finished=true ;
+			
+			//If there is a message in the inbox
+			//save the sender and finish this behaviour
+			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
+			final ACLMessage msg = this.myAgent.receive(msgTemplate);
+			
+			if(msg != null){
+				ArrayList<AID> sender = new ArrayList<AID>();
+				sender.add((AID) msg.getSender());
+				((CleverAgent) super.myAgent).setAgentsNearby(sender);
+				step = 0;
+				finished = true;
+				exitValue = 2;
+				System.out.println(this.myAgent.getLocalName()+" has a new message in the mailbox");
+			}
+			
+			//tous les MAX_STEP temps, on échange la map a ceux proches de nous			
+			else if(step>=MAX_STEP){
+				step = 0;
+				finished = true ;
+				exitValue = 0;
 				System.out.println("COMMUNICATION TIME for "+myAgent.getName());
+				
 			} else {
 				//si on n'a plus de noeuds ouverts, l'exploration est finie
 				if(opened.isEmpty()){
-					step=0;
 					finished = true;
 					System.out.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
 				}
@@ -199,7 +220,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 									next = chemin.remove(0);
 								} else {
 									next =graph.getNode(neighbors.get(i));
-									//graph.a
 								}
 							}
 							
@@ -233,6 +253,10 @@ public class ExploreBehaviour extends SimpleBehaviour {
 		((CleverAgent) super.myAgent).setGraph(graph);
 		((CleverAgent) super.myAgent).setChemin(chemin);
 		((CleverAgent) super.myAgent).setOpened(opened);
+	}
+	
+	public int onEnd(){
+		return exitValue;
 	}
 	
 	@Override
