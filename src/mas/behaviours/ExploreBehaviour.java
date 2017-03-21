@@ -167,6 +167,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				ArrayList<AID> sender = new ArrayList<AID>();
 				sender.add((AID) msg.getSender());
 				((CleverAgent) super.myAgent).setAgentsNearby(sender);
+				refreshAgent();
 				step = 0;
 				finished = true;
 				exitValue = 2;
@@ -175,6 +176,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			
 			//tous les MAX_STEP temps, on échange la map a ceux proches de nous			
 			else if(step>=MAX_STEP){
+				refreshAgent();
 				step = 0;
 				finished = true ;
 				exitValue = 0;
