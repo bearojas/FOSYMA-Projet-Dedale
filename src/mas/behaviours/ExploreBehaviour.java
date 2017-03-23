@@ -127,12 +127,12 @@ public class ExploreBehaviour extends SimpleBehaviour {
 //			System.out.println("noeuds ouverts: "+opened.toString());
 			
 			//Little pause to allow you to follow what is going on
-			try {
-				System.out.println("Press a key to allow the agent "+this.myAgent.getLocalName() +" to execute its next move");
-				System.in.read();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+//			try {
+//				System.out.println("Press a key to allow the agent "+this.myAgent.getLocalName() +" to execute its next move");
+//				System.in.read();
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
 
 			//example related to the use of the backpack for the treasure hunt
 			Boolean b=false;
@@ -160,21 +160,23 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			
 			//If there is a message in the inbox
 			//save the sender and finish this behaviour
-			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
+			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
 			final ACLMessage msg = this.myAgent.receive(msgTemplate);
 			
 			if(msg != null){
 				ArrayList<AID> sender = new ArrayList<AID>();
 				sender.add((AID) msg.getSender());
 				((CleverAgent) super.myAgent).setAgentsNearby(sender);
+				refreshAgent();
 				step = 0;
 				finished = true;
 				exitValue = 2;
 				System.out.println(this.myAgent.getLocalName()+" has a new message in the mailbox");
 			}
 			
-			//tous les MAX_STEP temps, on échange la map a ceux proches de nous			
+			//tous les MAX_STEP temps, on ï¿½change la map a ceux proches de nous			
 			else if(step>=MAX_STEP){
+				refreshAgent();
 				step = 0;
 				finished = true ;
 				exitValue = 0;
@@ -248,7 +250,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 		}
 		
 	}
-	
+	  
 	public void refreshAgent(){
 		((CleverAgent) super.myAgent).setGraph(graph);
 		((CleverAgent) super.myAgent).setChemin(chemin);

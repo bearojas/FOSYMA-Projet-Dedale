@@ -33,6 +33,12 @@ public class MainBehaviour extends FSMBehaviour{
 		registerDefaultTransition("EXCHANGEMAP_N", "EXPLORE",toReset);
 		registerDefaultTransition("EXCHANGEMAP_1", "EXPLORE", toReset);
 		
+		
+//		registerDefaultTransition("EXPLORE", "EXCHANGEMAP_N", new String[]{"EXCHANGEMAP_N"});
+//		registerTransition("EXPLORE", "EXCHANGEMAP_1", 2, new String[]{"EXCHANGEMAP_1"});
+//		registerDefaultTransition("EXCHANGEMAP_N", "EXPLORE",new String[]{"EXPLORE"});
+//		registerDefaultTransition("EXCHANGEMAP_1", "EXPLORE", new String[]{"EXPLORE"});
+		
 	}
 	
 
