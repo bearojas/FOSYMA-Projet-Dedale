@@ -133,14 +133,14 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 							int i = old_obs.indexOf("Treasure");
 							if(i == -1){
 								old_node.setAttribute("content", obs);
+
 							}
 							else{
 								int oldTreasureValue = (int) old_obs.get(i).getValue();
 								if((int)a.getValue() < oldTreasureValue ){
 									old_obs.get(i).setValue(a.getValue());
 								}
-							}
-	
+							}	
 						}
 							
 					}
