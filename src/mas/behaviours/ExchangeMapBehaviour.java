@@ -37,6 +37,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	private ArrayList <AID> receivers = new ArrayList <AID>();
 	private final int nbWaitAnswer = 5;
 	private int cptWait = 0;
+	private ArrayList<ACLMessage> msgs = new ArrayList<ACLMessage>();
 	
 	public ExchangeMapBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
@@ -58,21 +59,33 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	 *  fonction de transformation d'un graphe vers une HashMap
 	 *  clï¿½ de la HashMap : identifiant du noeud
 	 *  valeur pour chaque clï¿½ : les voisins du noeud, l'ï¿½tat du noeud et les observations de ce noeud	
-	 * @param graphToSend graph to send to other agents
+	 * @param graphToSend :  graph to send to other agents
+	 * @param recever : the recever of this message AID
 	 * @return a hashmap representing the graph
 	 */
-	
-	public HashMap<String,Data<List<String>,String, List<Attribute>>> graphToHashmap(Graph graphToSend){
-		HashMap<String,Data<List<String>,String, List<Attribute>>> finalMap = new HashMap<String,Data<List<String>,String, List<Attribute>>>();
-		//pour chaque noeud: crï¿½er la clï¿½, liste de voisins vide, et observation
+	public HashMap<String,Data<List<String>,String, List<Attribute>, List<AID>>> graphToHashmap(Graph graphToSend, AID receiver){
+		HashMap<String,Data<List<String>,String, List<Attribute>, List<AID>>> finalMap = new HashMap<String,Data<List<String>,String, List<Attribute>,List<AID>>>();
+		//pour chaque noeud: creer la cle, liste de voisins vide, et observation et agents ayant deja visite ce noeud
 		for (Node n : graphToSend){
-			finalMap.put(n.getId(), new Data(new ArrayList<String>(),(String)n.getAttribute("state"),(List<Attribute>)n.getAttribute("content")));
+			//si l'agent apparait dans la liste du noeud et que ce n'est pas un noeud trésor, on peut ne pas envoyer ce noeud
+			ArrayList<AID> lVisitor = n.getAttribute("haveBeenThere");
+			if(lVisitor==null)
+				lVisitor=new ArrayList<AID>();
+			if( lVisitor.indexOf(receiver) == -1 || ((List<Attribute>) n.getAttribute("content")).indexOf("TREASURE")!=-1){
+				// avant d'envoyer on ajoute directement le nom  de l'agent qui va recevoir le noeud dans la liste des agents ayant deja visite le noeud
+				lVisitor.add(receiver);
+				finalMap.put(n.getId(), new Data(new ArrayList<String>(),(String)n.getAttribute("state"),(List<Attribute>)n.getAttribute("content"),lVisitor));
+				//Quand on a envoyé un noeud, il faut modifier le sien en ajoutant l'agent à qui on l'a envoyé pour s'en souvenir
+				n.setAttribute("haveBeenThere", lVisitor);
+			}
 		}
 		//pour chaque arc, on rï¿½cupï¿½re le noeud source #e.getNode0()#,
 		//dans la hashMap ï¿½ cette clï¿½ on rï¿½cupï¿½re la liste des voisins #getLeft()#
 		//et on y insï¿½re le noeud destination #add(e.getNode1())#
 		for(Edge e : graphToSend.getEachEdge()){
-			finalMap.get(e.getNode0().getId()).getLeft().add(e.getNode1().getId());
+			// si le noeud allait etre envoye, on ajoute ses voisins
+			if(finalMap.containsKey(e.getNode0().getId()))
+				finalMap.get(e.getNode0().getId()).getFirst().add(e.getNode1().getId());
 		}
 		return finalMap;
 	}
@@ -82,18 +95,19 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	 * @param receivedHmap
 	 * @return a graph created from the map
 	 */
-	public Graph hashmapToGraph(HashMap<String, Data<List<String>,String, List<Attribute>>> receivedHmap){
+	public Graph hashmapToGraph(HashMap<String, Data<List<String>,String, List<Attribute>,List<AID>>> receivedHmap){
 		Graph finalGraph = new SingleGraph("");
 		finalGraph.setStrict(false);
-		for (Entry<String, Data<List<String>,String, List<Attribute>>> entry : receivedHmap.entrySet()){
+		for (Entry<String, Data<List<String>,String, List<Attribute>,List<AID>>> entry : receivedHmap.entrySet()){
 			//creation du noeud (si il existe deja retourne le noeud existant) 
 			Node n = finalGraph.addNode(entry.getKey()) ;
 			//ajout de l'attribut (modification si deja present)
-			n.addAttribute("state", entry.getValue().getMid());
-			n.addAttribute("content", entry.getValue().getRight());
+			n.addAttribute("state", entry.getValue().getSecond());
+			n.addAttribute("content", entry.getValue().getThird());
+			n.addAttribute("haveBeenThere", entry.getValue().getLast());
 			
 			// ajout des arcs, donc parcours des voisins 
-			for (String neighborId : entry.getValue().getLeft()){
+			for (String neighborId : entry.getValue().getFirst()){
 				// si l'arc existe deja, ne rien faire
 				if ( finalGraph.getEdge(n.getId()+neighborId)== null && finalGraph.getEdge(neighborId+n.getId())==null){
 					finalGraph.addNode(neighborId);
@@ -116,12 +130,15 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				Node new_node = myGraph.addNode(n.getId());
 				new_node.addAttribute("state", (String)n.getAttribute("state"));
 				new_node.addAttribute("content", (n.getAttribute("content")==null)? new ArrayList<Attribute>(): n.getAttribute("content"));
+				new_node.addAttribute("haveBeenThere",(n.getAttribute("haveBeenThere")==null)? new ArrayList<AID>(): n.getAttribute("haveBeenThere") );
 				
 			} else { // si le noeud existait, on compare les attributs
 				//si ce noeud a ete explore, on le marque closed (ne change rien s'il l'ï¿½tait deja)
 				if (n.getAttribute("state").equals("closed"))
 					old_node.setAttribute("state", "closed");
-
+				
+				old_node.setAttribute("haveBeenThere", ((List<AID>)old_node.getAttribute("haveBeenThere")).addAll(n.getAttribute("haveBeenThere")) );
+				
 				List<Attribute> obs = n.getAttribute("content");
 				List<Attribute> old_obs = old_node.getAttribute("content");
 				
@@ -130,7 +147,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				if(obs != null){
 					for(Attribute a : obs){
 						if(a.getName().equals("Treasure")){
-							int i = old_obs.indexOf("Treasure");
+							int i =-1;
+							if (old_obs!= null)
+								i = old_obs.indexOf("Treasure");
 							if(i == -1){
 								old_node.setAttribute("content", obs);
 
@@ -182,40 +201,38 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					
 					
 					state++;
-					break;
-				}			
+				}		
+				break;
 				
 			case 1:
-				// regarde sa boite aux lettres et attends un message de rÃ©ponse (timeout)
-				
+				// regarde sa boite aux lettres et attend un message de rÃ©ponse (timeout)	
 				final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
 				final ACLMessage answer = this.myAgent.receive(msgTemplate);
 				
 				if (answer  != null) {
 					System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
 					receivers.add((AID) answer.getSender());
-	
-				}else{
-					// si limite de rï¿½ponses attendues atteint 
-					if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
-						state=3;
+				}
+				// si limite de rï¿½ponses attendues atteint 
+				if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
+					state=3;
+					cptWait=0;
+				}
+				// si temps d'attente atteint
+				else if(cptWait >= nbWaitAnswer){
+					if(receivers.isEmpty()){
 						cptWait=0;
-					}
-					// si temps d'attente atteint
-					else if(cptWait >= nbWaitAnswer){
-						if(receivers.isEmpty()){
-							state = 5;
-						}
-						else{
-							state = 3;
-							cptWait = 0;
-						}
+						state = 5;
 					}
 					else{
-						block(1000);
-						cptWait++;
+						state = 3;
+						cptWait = 0;
 					}
-												
+				}
+				else{
+					System.out.println(this.myAgent.getLocalName()+" attend un signe");
+					block(1500);
+					cptWait++;
 				}
 				break;
 				
@@ -235,7 +252,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					for(AID id: receivers){
 						msge.addReceiver(id);				
 					}
-					System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach "+receivers.toString());
+					System.out.println("Agent "+this.myAgent.getLocalName()+ " in state 2 is trying to reach "+receivers.toString());
 					((mas.abstractAgent)this.myAgent).sendMessage(msge);
 					
 					state++;
@@ -248,9 +265,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
 					mapMsg.setSender(this.myAgent.getAID());
 					mapMsg.addReceiver(c);
-					HashMap<String,Data<List<String>,String, List<Attribute>>> mapToSend = graphToHashmap(myGraph);
+					HashMap<String,Data<List<String>,String, List<Attribute>, List<AID>>> mapToSend = graphToHashmap(myGraph, c);
 					
-					System.out.println("Agent "+this.myAgent.getLocalName()+" sends "+mapToSend.toString()+" to "+c.getLocalName());
+					System.out.println("Agent "+this.myAgent.getLocalName()+" sends a map to "+c.getLocalName());
 					
 					try {
 						mapMsg.setContentObject(mapToSend);
@@ -268,45 +285,58 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				// on attend les graph des autres
 				// on convertit les maps reÃ§ues en graphe
 				// et on fusionne chaque graph avec le notre
-				final MessageTemplate msgTemp = MessageTemplate.MatchPerformative(ACLMessage.INFORM);			
-				final ACLMessage receivedMap = this.myAgent.receive(msgTemp);
-				
-				if (receivedMap != null) {
-					System.out.println(this.myAgent.getLocalName()+"<----Received a map from "+receivedMap.getSender().getLocalName());
-					try {
-						HashMap<String, Data<List<String>, String, List<Attribute>>> hmap;		
-						hmap = ((HashMap<String, Data<List<String>, String, List<Attribute>>>) receivedMap.getContentObject());
-						
-						System.out.println("Agent "+this.myAgent.getLocalName()+"received a map");
-						
-						Graph receivedGraph = hashmapToGraph(hmap);
-						graphsFusion(receivedGraph);
-						receivers.remove(receivedMap.getSender());
-					} catch (UnreadableException e) {
-						e.printStackTrace();
-					}
+
+				// attendre toutes les maps des agents contactés
+				while(msgs.size()< receivers.size()){
+					ACLMessage tmp = (myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM)));
+					msgs.add(tmp);
+					System.out.println("NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size());
+					block(1000);
+				}
+				//pour chaque map reçue
+				for(ACLMessage receivedMap : msgs){		
 					
-	
-				}else{
-					// si limite de rï¿½ponses attendues atteint 
-					if( receivers.isEmpty()){
-						refreshAgent();
-						cptWait=0;
-						state++;
-					}
-					else{
-						if(cptWait >= nbWaitAnswer){
+					if (receivedMap != null) {
+						System.out.println(this.myAgent.getLocalName()+"<----Received a map from "+receivedMap.getSender().getLocalName());
+						try {
+							HashMap<String, Data<List<String>, String, List<Attribute>, List<AID>>> hmap;		
+							hmap = ((HashMap<String, Data<List<String>, String, List<Attribute>, List<AID>>>) receivedMap.getContentObject());
+							
+							Graph receivedGraph = hashmapToGraph(hmap);
+							graphsFusion(receivedGraph);
+							receivers.remove(receivedMap.getSender());
 							refreshAgent();
-							state++;
+						} catch (UnreadableException e) {
+							e.printStackTrace();
 						}
-						else{
-							block(1000);
-							cptWait++;
-						}
+						
 					}
-				}break;
+//					}else{
+//						// si limite de rï¿½ponses attendues atteint 
+//						if( receivers.isEmpty()){
+//							refreshAgent();
+//							cptWait=0;
+//							//state++;
+//						}
+//						else{
+//							if(cptWait >= nbWaitAnswer){
+//								refreshAgent();
+////								state++;
+//							}
+//							else{
+//								block(1000);
+//								cptWait++;
+//							}
+//						}
+//					}		
+				}
+				cptWait=0;
+				msgs.clear();
+				state++;
+				break;
 				
-			default: break;
+			default: 
+				break;
 		}		
 	}
 	

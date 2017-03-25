@@ -1,15 +1,7 @@
 package mas.behaviours;
 
-import jade.core.AID;
-import jade.core.behaviours.SimpleBehaviour;
-import jade.lang.acl.ACLMessage;
-import jade.lang.acl.MessageTemplate;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import mas.agents.CleverAgent;
 
 import org.graphstream.algorithm.Dijkstra;
 import org.graphstream.graph.Graph;
@@ -19,6 +11,11 @@ import org.graphstream.graph.implementations.Graphs;
 
 import env.Attribute;
 import env.Couple;
+import jade.core.AID;
+import jade.core.behaviours.SimpleBehaviour;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import mas.agents.CleverAgent;
 
 
 public class ExploreBehaviour extends SimpleBehaviour {
@@ -29,7 +26,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private List<Node> chemin;
 	private ArrayList<String> opened ;
 	private int step = 0;
-	private final int MAX_STEP = 3;
+	private final int MAX_STEP = 5;
 	private int exitValue = 0;
 	
 	public ExploreBehaviour(final mas.abstractAgent myagent){
@@ -42,8 +39,13 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	}
 	
 
-	//fonction de recherche du plus court chemin vers le noeud ouvert le plus proche
-	// renvoie le plus court chemin sans la racine
+	/**
+	 * fonction de recherche du plus court chemin vers le noeud ouvert le plus proche
+	 * @param myGraph : le graphe à parcourir
+	 * @param root : noeud racine
+	 * @param open : liste des noeuds non visités
+	 * @return le plus court chemin sans la racine vers le noeud ouvert le plus proche
+	 */
 	public List<Node> search(Graph myGraph,Node root, ArrayList<String> open){
 
 		Dijkstra dijk = new Dijkstra(Dijkstra.Element.NODE, null, null);
@@ -88,7 +90,9 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			}
 			//list of attribute associated to the currentPosition
 			List<Attribute> lattribute= lobs.get(posIndex).getRight();
-			
+			// list of agent's AID : agents who have already visited the node
+			List<AID> agentsWhoKnowNode = new ArrayList<AID>()  ;
+			agentsWhoKnowNode.add(myAgent.getAID());
 //			for(Attribute a: lattribute){
 //				System.out.println("name:"+a.getName());
 //				System.out.println("valeur:"+a.getValue());
@@ -101,6 +105,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			Node root = graph.addNode(myPosition);
 			root.addAttribute("state", "closed");
 			root.addAttribute("content",lattribute);
+			root.addAttribute("haveBeenThere", agentsWhoKnowNode);
 			opened.remove(myPosition);
 			
 			//add all neighbors of current node 
@@ -171,7 +176,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				step = 0;
 				finished = true;
 				exitValue = 2;
-				System.out.println(this.myAgent.getLocalName()+" has a new message in the mailbox");
+				System.out.println(this.myAgent.getLocalName()+" is in Explore and has a new message in the mailbox");
 			}
 			
 			//tous les MAX_STEP temps, on ï¿½change la map a ceux proches de nous			
@@ -211,7 +216,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 //							System.out.println("VOISINS "+neighbors.toString());
 							int i =0 ;
 							Node next = graph.getNode(neighbors.get(i));
-							System.out.println("Je vais en "+ next.getId());
+							System.out.println(myAgent.getLocalName()+" va en "+ next.getId());
 							// si on ne peut pas aller vers son voisin
 							// soit on prend le voisin suivant
 							// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin

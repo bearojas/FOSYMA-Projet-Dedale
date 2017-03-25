@@ -4,33 +4,40 @@ import jade.util.leap.Serializable;
 
 
 /**
- * Class to save 3 data in a row
+ * Class to save 4 data in a row
  * @param <E>
  * @param <F>
  * @param <G>
+ * @param <H>>
  */
-public class Data<E,F,G> implements Serializable{
+public class Data<E,F,G,H> implements Serializable{
 	
 	private static final long serialVersionUID = 1L;
 	private E first ;
-	private F mid ;
-	private G right ;
+	private F second ;
+	private G third ;
+	private H last ;
 	
-	public Data(E n, F s, G att){
+	public Data(E n, F s, G att, H aid){
 		first = n;
-		mid = s;
-		right = att ;
+		second = s;
+		third= att ;
+		last=aid ;
 	}
 	
-	public E getLeft(){
+	public E getFirst(){
 		return first ;
 	}
 	
-	public F getMid(){
-		return mid ;
+	public F getSecond(){
+		return second ;
 	}
 	
-	public G getRight(){
-		return right ;
+	public G getThird(){
+		return third ;
+	}
+	
+	public H getLast(){
+		return last ;
 	}
 }
