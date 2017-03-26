@@ -1,5 +1,6 @@
 package mas.behaviours;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +28,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private ArrayList<String> opened ;
 	private int step = 0;
 	private final int MAX_STEP = 5;
-	private int exitValue = 0;
+	private int exitValue = 1;
 	
 	public ExploreBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
@@ -73,6 +74,8 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	@Override
 	public void action() {
 	
+		exitValue= 1 ;
+		
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		
 		if (myPosition!=""){

@@ -68,13 +68,13 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		//pour chaque noeud: creer la cle, liste de voisins vide, et observation et agents ayant deja visite ce noeud
 		for (Node n : graphToSend){
 			//si l'agent apparait dans la liste du noeud et que ce n'est pas un noeud trésor, on peut ne pas envoyer ce noeud
-			ArrayList<AID> lVisitor = n.getAttribute("haveBeenThere");
-			if(lVisitor==null)
-				lVisitor=new ArrayList<AID>();
-			if( lVisitor.indexOf(receiver) == -1 || ((List<Attribute>) n.getAttribute("content")).indexOf("TREASURE")!=-1){
+			ArrayList<AID> lVisitor = n.getAttribute("haveBeenThere")==null?new ArrayList<AID>():n.getAttribute("haveBeenThere");
+			List<Attribute> lattribute = n.getAttribute("content")==null?new ArrayList<Attribute>(): n.getAttribute("content");
+
+			if( lVisitor.indexOf(receiver) == -1 || ((List<Attribute>) lattribute).indexOf("TREASURE")!=-1){
 				// avant d'envoyer on ajoute directement le nom  de l'agent qui va recevoir le noeud dans la liste des agents ayant deja visite le noeud
 				lVisitor.add(receiver);
-				finalMap.put(n.getId(), new Data(new ArrayList<String>(),(String)n.getAttribute("state"),(List<Attribute>)n.getAttribute("content"),lVisitor));
+				finalMap.put(n.getId(), new Data(new ArrayList<String>(),(String)n.getAttribute("state"),lattribute,lVisitor));
 				//Quand on a envoyé un noeud, il faut modifier le sien en ajoutant l'agent à qui on l'a envoyé pour s'en souvenir
 				n.setAttribute("haveBeenThere", lVisitor);
 			}
@@ -134,10 +134,16 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				
 			} else { // si le noeud existait, on compare les attributs
 				//si ce noeud a ete explore, on le marque closed (ne change rien s'il l'ï¿½tait deja)
-				if (n.getAttribute("state").equals("closed"))
+				if (n.getAttribute("state")==null || n.getAttribute("state").equals("closed"))
 					old_node.setAttribute("state", "closed");
 				
-				old_node.setAttribute("haveBeenThere", ((List<AID>)old_node.getAttribute("haveBeenThere")).addAll(n.getAttribute("haveBeenThere")) );
+				List<AID>lOld_node = ( ((List<AID>)old_node.getAttribute("haveBeenThere"))==null)?new ArrayList<AID>():((List<AID>)old_node.getAttribute("haveBeenThere"));
+				
+				for (AID a : ((List<AID>) n.getAttribute("haveBeenThere"))){
+					if ( lOld_node.indexOf(a) == -1 )
+						lOld_node.add(a);
+				}
+				old_node.setAttribute("haveBeenThere", lOld_node );
 				
 				List<Attribute> obs = n.getAttribute("content");
 				List<Attribute> old_obs = old_node.getAttribute("content");
@@ -198,45 +204,64 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						msg.addReceiver(id);				
 					}
 					((mas.abstractAgent)this.myAgent).sendMessage(msg);
+						
+				//fusion de case 0 et case 1 
+				// car avant n'envoyait qu'un message du coup si quelqu'un arrivait après l'envoi
+				// il était jamais contacté mais l'autre oui et bloquait
 					
-					
-					state++;
-				}		
-				break;
+					// regarde sa boite aux lettres et attend un message de rÃ©ponse (timeout)	
+					final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
+					final ACLMessage answer = this.myAgent.receive(msgTemplate);
 				
-			case 1:
-				// regarde sa boite aux lettres et attend un message de rÃ©ponse (timeout)	
-				final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
-				final ACLMessage answer = this.myAgent.receive(msgTemplate);
-				
-				if (answer  != null) {
-					System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
-					receivers.add((AID) answer.getSender());
-				}
-				// si limite de rï¿½ponses attendues atteint 
-				if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
-					state=3;
-					cptWait=0;
-				}
-				// si temps d'attente atteint
-				else if(cptWait >= nbWaitAnswer){
-					if(receivers.isEmpty()){
+					if (answer  != null) {
+						System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
+						receivers.add((AID) answer.getSender());
+					}
+					// si limite de rï¿½ponses attendues atteint 
+					if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
+						state=3;
 						cptWait=0;
-						state = 5;
+					}
+					// si temps d'attente atteint
+					else if(cptWait >= nbWaitAnswer){
+						if(receivers.isEmpty()){
+							//si personne n'a répondu dans les temps on envoie un message d'annulation
+							final ACLMessage finalComm = new ACLMessage(ACLMessage.CANCEL);
+							finalComm.setContent("end communication");
+							finalComm.setSender(this.myAgent.getAID());
+							for(AID aid: receivers){
+								finalComm.addReceiver(aid);				
+							}
+							((mas.abstractAgent)this.myAgent).sendMessage(finalComm);
+							System.out.println(myAgent.getLocalName()+" annule");
+							cptWait=0;
+							state = 5;
+						}
+						else{
+							state = 3;
+							cptWait = 0;
+						}
 					}
 					else{
-						state = 3;
-						cptWait = 0;
+						System.out.println(this.myAgent.getLocalName()+" attend un signe");
+						block(1500);
+						this.myAgent.send(msg);
+						cptWait++;
 					}
-				}
-				else{
-					System.out.println(this.myAgent.getLocalName()+" attend un signe");
-					block(1500);
-					cptWait++;
 				}
 				break;
 				
 			case 2:
+				// Agent 1 essaye de communiquer 1...5 fois
+				//à la 5eme Agent 2 passe dans les environs et intercepte le message
+				//Agent 2 s'interrompt et passe en state 2
+				// mais Agent1 est reparti et s'est trop éloigné -> ne reçoit pas le message 
+				// Agent 2 passe en 3 et 4 et reste coincé
+				//********************
+				//SOLUTION ?
+				// au dernier tour de communication, Agent peut envoyer un message "end"
+				// dans le case 3 ou 4 si on reçoit un message "end" de notre contact
+				// on supprime ce contact de la liste de recevers
 				receivers = ((CleverAgent) this.myAgent).getAgentsNearby();
 				((CleverAgent) this.myAgent).setAgentsNearby(new ArrayList<AID>());
 				
@@ -255,12 +280,28 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					System.out.println("Agent "+this.myAgent.getLocalName()+ " in state 2 is trying to reach "+receivers.toString());
 					((mas.abstractAgent)this.myAgent).sendMessage(msge);
 					
+					ACLMessage cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					while(cancelMsg !=null){
+						System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancelMsg.getSender().getLocalName());
+						receivers.remove(cancelMsg.getSender());
+						cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					}
+					
 					state++;
 				}
 				break;
 				
 			case 3:
 				//convertir le graph en map spÃ©cifique a chaque agent qui a rÃ©pondu et l'envoyer
+				
+				//si on a reçu message d'annulation
+				ACLMessage cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+				while(cancelMsg !=null){
+					System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancelMsg.getSender().getLocalName());
+					receivers.remove(cancelMsg.getSender());
+					cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+				}
+				
 				for(AID c : receivers){
 					ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
 					mapMsg.setSender(this.myAgent.getAID());
@@ -289,9 +330,17 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				// attendre toutes les maps des agents contactés
 				while(msgs.size()< receivers.size()){
 					ACLMessage tmp = (myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM)));
-					msgs.add(tmp);
-					System.out.println("NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size());
+					if (tmp!=null)
+						msgs.add(tmp);
+//					System.out.println(myAgent.getLocalName()+" NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size()+"  "+receivers.toString());
 					block(1000);
+					//si on reçoit message d'annulation
+					ACLMessage cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					while(cancel !=null){
+						System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancel.getSender().getLocalName());
+						receivers.remove(cancel.getSender());
+						cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					}
 				}
 				//pour chaque map reçue
 				for(ACLMessage receivedMap : msgs){		
