@@ -138,8 +138,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					old_node.setAttribute("state", "closed");
 				
 				List<AID>lOld_node = ( ((List<AID>)old_node.getAttribute("haveBeenThere"))==null)?new ArrayList<AID>():((List<AID>)old_node.getAttribute("haveBeenThere"));
-				
-				for (AID a : ((List<AID>) n.getAttribute("haveBeenThere"))){
+				List<AID>lnew_node = ( ((List<AID>)n.getAttribute("haveBeenThere"))==null)?new ArrayList<AID>():((List<AID>)n.getAttribute("haveBeenThere"));
+
+				for (AID a : lnew_node){
 					if ( lOld_node.indexOf(a) == -1 )
 						lOld_node.add(a);
 				}
@@ -199,23 +200,44 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
 					msg.setContent(myPosition);
 	
-					//on ajoute tous les agents ï¿½ la liste des destinataires
+					//on ajoute tous les agents ï¿½ la liste des destinataires (evite les doublons)
 					for(AID id: ((CleverAgent)super.myAgent).getAgentList()){
-						msg.addReceiver(id);				
+						if(receivers.indexOf(id)==-1)
+							msg.addReceiver(id);				
 					}
 					((mas.abstractAgent)this.myAgent).sendMessage(msg);
+				}
+				state++;
+				break ;
 						
 				//fusion de case 0 et case 1 
 				// car avant n'envoyait qu'un message du coup si quelqu'un arrivait après l'envoi
 				// il était jamais contacté mais l'autre oui et bloquait
+					//OU ALORS : envoie un seul message
+					// si on reoit un message on réenvoie un message request : ok
+					// comme ça si quelqu'un arrive après et qu'on a reçu son message c'est bon
+				// MAIS bloque quand meme :
+				// Agt 1 envoie 1 message, puis 2 avant que Agt2 ne dise qu'il en a reçu un :
+				// du coup agt 2 aura 2 message de ag1 à traiter : pas bon
+					// PROBLEME
+					//Explo3 is in Explore and has a new message in the mailbox 1_8
+					//Agent Explo3 state: 0 pk passe pas en state 2 ?
 					
+			case 1 :
 					// regarde sa boite aux lettres et attend un message de rÃ©ponse (timeout)	
 					final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
 					final ACLMessage answer = this.myAgent.receive(msgTemplate);
 				
 					if (answer  != null) {
 						System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
-						receivers.add((AID) answer.getSender());
+						if(receivers.indexOf(answer.getSender())==-1){
+							receivers.add((AID) answer.getSender());
+							ACLMessage okMsg = new ACLMessage(ACLMessage.REQUEST);
+							okMsg.setContent("ok"); okMsg.setSender(this.myAgent.getAID());
+							okMsg.addReceiver(answer.getSender());
+							myAgent.send(okMsg);
+						}
+						System.out.println(receivers.toString());
 					}
 					// si limite de rï¿½ponses attendues atteint 
 					if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
@@ -245,10 +267,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					else{
 						System.out.println(this.myAgent.getLocalName()+" attend un signe");
 						block(1500);
-						this.myAgent.send(msg);
 						cptWait++;
 					}
-				}
+				
 				break;
 				
 			case 2:
@@ -334,8 +355,10 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						msgs.add(tmp);
 //					System.out.println(myAgent.getLocalName()+" NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size()+"  "+receivers.toString());
 					block(1000);
+	
 					//si on reçoit message d'annulation
 					ACLMessage cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+
 					while(cancel !=null){
 						System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancel.getSender().getLocalName());
 						receivers.remove(cancel.getSender());

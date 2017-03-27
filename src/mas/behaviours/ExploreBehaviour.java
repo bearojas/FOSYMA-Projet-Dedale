@@ -166,12 +166,12 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				System.out.println("lobs after picking "+lobs2);
 			}
 			
-			//If there is a message in the inbox
+			//If there is a message in the inbox (not an "accecpt com" message)
 			//save the sender and finish this behaviour
 			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
 			final ACLMessage msg = this.myAgent.receive(msgTemplate);
 			
-			if(msg != null){
+			if(msg != null && !msg.getContent().equals("ok")){
 				ArrayList<AID> sender = new ArrayList<AID>();
 				sender.add((AID) msg.getSender());
 				((CleverAgent) super.myAgent).setAgentsNearby(sender);
@@ -179,7 +179,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				step = 0;
 				finished = true;
 				exitValue = 2;
-				System.out.println(this.myAgent.getLocalName()+" is in Explore and has a new message in the mailbox");
+				System.out.println(this.myAgent.getLocalName()+" is in Explore and has a new message in the mailbox "+msg.getContent());
 			}
 			
 			//tous les MAX_STEP temps, on �change la map a ceux proches de nous			
