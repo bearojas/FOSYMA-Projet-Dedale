@@ -28,6 +28,11 @@ public class CleverAgent extends abstractAgent{
 	private ArrayList<AID> agentsNearby = new ArrayList<AID>();
 	private ArrayList<String> opened = new ArrayList<String>();
 	private ArrayList<AID> agentList = new ArrayList<AID>();
+	private int communicationState = 0;
+	private boolean interblocage = false;
+	//derniers agents avec qui ont a communiqué
+	private ArrayList<AID> lastCom= new ArrayList<AID>();
+	
 	
 	public Graph getGraph() {
 		return graph;
@@ -69,7 +74,30 @@ public class CleverAgent extends abstractAgent{
 		agentList=newList;
 	}
 	
+	public int getCommunicationState() {
+		return communicationState;
+	}
 
+	public void setCommunicationState(int communicationState) {
+		this.communicationState = communicationState;
+	}
+	
+	public boolean isInterblocage() {
+		return interblocage;
+	}
+
+	public void setInterblocage(boolean interblocage) {
+		this.interblocage = interblocage;
+	}
+	
+	public ArrayList<AID> getLastCom() {
+		return lastCom;
+	}
+
+	public void setLastCom(ArrayList<AID> lastCom) {
+		this.lastCom = lastCom;
+	}
+	
 	protected void setup(){
 
 		super.setup();
@@ -102,4 +130,7 @@ public class CleverAgent extends abstractAgent{
 	protected void takeDown(){
 
 	}
+
+
+
 }

@@ -28,7 +28,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private ArrayList<String> opened ;
 	private int step = 0;
 	private final int MAX_STEP = 5;
-	private int exitValue = 1;
+	private int exitValue = 0;
 	
 	public ExploreBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
@@ -42,9 +42,9 @@ public class ExploreBehaviour extends SimpleBehaviour {
 
 	/**
 	 * fonction de recherche du plus court chemin vers le noeud ouvert le plus proche
-	 * @param myGraph : le graphe à parcourir
+	 * @param myGraph : le graphe ï¿½ parcourir
 	 * @param root : noeud racine
-	 * @param open : liste des noeuds non visités
+	 * @param open : liste des noeuds non visitï¿½s
 	 * @return le plus court chemin sans la racine vers le noeud ouvert le plus proche
 	 */
 	public List<Node> search(Graph myGraph,Node root, ArrayList<String> open){
@@ -74,7 +74,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	@Override
 	public void action() {
 	
-		exitValue= 1 ;
+		exitValue= 0 ;
 		
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		
@@ -175,6 +175,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				ArrayList<AID> sender = new ArrayList<AID>();
 				sender.add((AID) msg.getSender());
 				((CleverAgent) super.myAgent).setAgentsNearby(sender);
+				((CleverAgent) super.myAgent).setCommunicationState(2);
 				refreshAgent();
 				step = 0;
 				finished = true;
@@ -184,10 +185,11 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			
 			//tous les MAX_STEP temps, on ï¿½change la map a ceux proches de nous			
 			else if(step>=MAX_STEP){
+				((CleverAgent) super.myAgent).setCommunicationState(0);
 				refreshAgent();
 				step = 0;
 				finished = true ;
-				exitValue = 0;
+				exitValue = 1;
 				System.out.println("COMMUNICATION TIME for "+myAgent.getName());
 				
 			} else {
@@ -221,14 +223,14 @@ public class ExploreBehaviour extends SimpleBehaviour {
 							Node next = graph.getNode(neighbors.get(i));
 							System.out.println(myAgent.getLocalName()+" va en "+ next.getId());
 							// si on ne peut pas aller vers son voisin
-							// soit on prend le voisin suivant
-							// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin
+											
 							while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
 								i++ ;
+								// soit, si on a fait toute la liste des voisins, on fait une recherche de chemin
 								if( i >= neighbors.size()){
 									chemin = search(graph, root, opened);
 									next = chemin.remove(0);
-								} else {
+								} else { // soit on prend le voisin suivant
 									next =graph.getNode(neighbors.get(i));
 								}
 							}
