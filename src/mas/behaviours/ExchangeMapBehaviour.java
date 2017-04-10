@@ -206,27 +206,24 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				((CleverAgent) super.myAgent).setCommunicationState(state+1);
 				break ;
 						
-				//fusion de case 0 et case 1 
-				// car avant n'envoyait qu'un message du coup si quelqu'un arrivait aprï¿½s l'envoi
-				// il ï¿½tait jamais contactï¿½ mais l'autre oui et bloquait
-					//OU ALORS : envoie un seul message
+					//envoie un seul message
 					// si on reÃ§oit un message on rï¿½envoie un message request : ok
 					// comme ï¿½a si quelqu'un arrive aprï¿½s et qu'on a reï¿½u son message c'est bon
-				// MAIS bloque quand meme :
-				// Agt 1 envoie 1 message, puis 2 avant que Agt2 ne dise qu'il en a reï¿½u un :
-				// du coup agt 2 aura 2 message de ag1 ï¿½ traiter : pas bon
-					// PROBLEME
-					//Explo3 is in Explore and has a new message in the mailbox 1_8
-					//Agent Explo3 state: 0 pk passe pas en state 2 ?
 					
 			case 1 :
 					// regarde sa boite aux lettres et attend un message de rÃ©ponse (timeout)	
 					final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
 					final ACLMessage answer = this.myAgent.receive(msgTemplate);
 				
+					//TODO rafraichir la liste ? la supprimer de temps en temps ?
+					/*
+					 * on regarde la sous liste constituée des 25% premiers agents récemment contactés
+					 * si le gars en fait partie, on ne le contactera pas
+					 */
+					int mostRecent = ((CleverAgent) super.myAgent).getLastCom().size()/4 ;
 					if (answer  != null) {
 						System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
-						if(receivers.indexOf(answer.getSender())==-1 ){
+						if(receivers.indexOf(answer.getSender())==-1 && !((CleverAgent) super.myAgent).getLastCom().subList(0, mostRecent).contains(answer.getSender()) ){
 							receivers.add((AID) answer.getSender());
 							ACLMessage okMsg = new ACLMessage(ACLMessage.REQUEST);
 							okMsg.setContent("ok"); okMsg.setSender(this.myAgent.getAID());
@@ -378,32 +375,28 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 							
 							Graph receivedGraph = hashmapToGraph(hmap);
 							graphsFusion(receivedGraph);
+							/*
+							 * pour chaque message reçu, on a donc communiqué avec l'expéditeur
+							 * on l'ajoute donc en tete de notre liste de comm
+							 */
+							ArrayList<AID> comm=((CleverAgent) super.myAgent).getLastCom();
+							int index = comm.indexOf(receivedMap.getSender());
+							if(index==-1){
+								comm.add(0, receivedMap.getSender());			
+							} else {
+								comm.remove(index);
+								comm.add(0, receivedMap.getSender());
+							}
+							((CleverAgent) super.myAgent).setLastCom(comm);
 							receivers.remove(receivedMap.getSender());
 							refreshAgent();
 						} catch (UnreadableException e) {
 							e.printStackTrace();
 						}
 						
-					}
-//					}else{
-//						// si limite de rï¿½ponses attendues atteint 
-//						if( receivers.isEmpty()){
-//							refreshAgent();
-//							cptWait=0;
-//							//state++;
-//						}
-//						else{
-//							if(cptWait >= nbWaitAnswer){
-//								refreshAgent();
-////								state++;
-//							}
-//							else{
-//								block(1000);
-//								cptWait++;
-//							}
-//						}
-//					}		
+					}		
 				}
+				
 				cptWait=0;
 				msgs.clear();
 				receivers.clear();
