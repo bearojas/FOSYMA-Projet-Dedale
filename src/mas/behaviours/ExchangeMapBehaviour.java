@@ -38,6 +38,11 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	private final int nbWaitAnswer = 5;
 	private int cptWait = 0;
 	private ArrayList<ACLMessage> msgs = new ArrayList<ACLMessage>();
+	/**
+	 * exit_value : 0 -> Explore
+	 * 				1 -> Interblocage
+	 */
+	private int exit_value = 0 ;
 	
 	public ExchangeMapBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
@@ -321,6 +326,11 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					receivers.remove(cancelMsg.getSender());
 					cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
 				}
+				//TODO
+				if( ((CleverAgent)this.myAgent).isInterblocage()==true){
+					receivers = ((CleverAgent)this.myAgent).getAgentsNearby();
+					((CleverAgent)this.myAgent).setAgentsNearby(new ArrayList<AID>());
+				}
 				
 				for(AID c : receivers){
 					ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
@@ -400,6 +410,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				cptWait=0;
 				msgs.clear();
 				receivers.clear();
+				//TODO
+				if(((CleverAgent)this.myAgent).isInterblocage())
+					exit_value=1;
 				((CleverAgent) super.myAgent).setCommunicationState(state+1);
 				break;
 				
@@ -412,6 +425,11 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		((CleverAgent) super.myAgent).setGraph(myGraph);
 	}
 
+	@Override
+	public int onEnd() {
+		return exit_value;
+	}
+	
 	@Override
 	public boolean done() {
 		if(((CleverAgent) super.myAgent).getCommunicationState() == 5){

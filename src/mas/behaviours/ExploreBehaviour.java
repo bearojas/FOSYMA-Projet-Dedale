@@ -178,8 +178,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			final ACLMessage msg = this.myAgent.receive(msgTemplate);
 			ArrayList<AID> lastCom = ((CleverAgent)super.myAgent).getLastCom();
 			//si l'expéditeur est qq'un avec qui on a communiqué récemment, ignorer
-			//TODO 
-			// quand on reçoit un message d'interblocage
 			if(msg != null && !msg.getContent().equals("ok") && !lastCom.subList(0, lastCom.size()/4).contains(msg.getSender())){
 				ArrayList<AID> sender = new ArrayList<AID>();
 				sender.add((AID) msg.getSender());
@@ -216,14 +214,16 @@ public class ExploreBehaviour extends SimpleBehaviour {
 						/*
 						 * si on a pas pu se déplacer il y a un agent qui nous bloque
 						 * rentrer en communication avec lui
+						 * dans interblocage state : 0 -> attente d'un message d'interblocage aussi
 						 */
 						if(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
 							chemin.add(0,next); //pour conserver le chemin en entier, le noeud bloqué est donc le premier du chemin et destination le dernier
 							((CleverAgent)super.myAgent).setInterblocage(true);	
+							((CleverAgent)super.myAgent).setInterblocageState(0);
 							refreshAgent();
 							System.out.println("INTERBLOCAGE pour agent "+myAgent.getName()+" qui veut aller en "+next.getId());
 							final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
-							mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()); //le noeud qui nous boque
+							mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()+"_"+myPosition); //le noeud qui nous boque_où on est
 							for (AID aid : ((CleverAgent)super.myAgent).getAgentList()){
 								mess.addReceiver(aid);
 							}

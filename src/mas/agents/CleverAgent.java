@@ -30,6 +30,7 @@ public class CleverAgent extends abstractAgent{
 	private ArrayList<AID> agentList = new ArrayList<AID>();
 	private int communicationState = 0;
 	private boolean interblocage = false;
+	private int interblocageState = 0;
 	//derniers agents avec qui ont a communiqué
 	private ArrayList<AID> lastCom= new ArrayList<AID>();
 	
@@ -129,6 +130,14 @@ public class CleverAgent extends abstractAgent{
 	 */
 	protected void takeDown(){
 
+	}
+
+	public int getInterblocageState() {
+		return interblocageState;
+	}
+
+	public void setInterblocageState(int interblocageState) {
+		this.interblocageState = interblocageState;
 	}
 
 
