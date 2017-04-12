@@ -186,7 +186,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	@Override
 	public void action() {
 		
-
+		exit_value=0;
 		state = ((CleverAgent) super.myAgent).getCommunicationState();
 		System.out.println("Agent "+this.myAgent.getLocalName()+" state: "+state);
 		

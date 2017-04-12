@@ -255,16 +255,27 @@ public class ExploreBehaviour extends SimpleBehaviour {
 							while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
 								i++ ;
 //								// si on a fait toute la liste des voisins, on est en interblocage
-								if( i >= neighbors.size()){
-									((CleverAgent)super.myAgent).setInterblocage(true);		
-									//s'échanger les cartes ?
-								}
 //								if( i >= neighbors.size()){
-//									chemin = search(graph, root, opened);
-//									next = chemin.remove(0);
-//								} else { // soit on prend le voisin suivant
-//									next =graph.getNode(neighbors.get(i));
+//									((CleverAgent)super.myAgent).setInterblocageState(0);
+//									((CleverAgent)super.myAgent).setInterblocage(true);	
+//									refreshAgent();
+//									System.out.println("INTERBLOCAGE pour agent "+myAgent.getName()+" qui veut aller en "+next.getId());
+//									final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
+//									mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()+"_"+myPosition); //le noeud qui nous boque_où on est
+//									for (AID aid : ((CleverAgent)super.myAgent).getAgentList()){
+//										mess.addReceiver(aid);
+//									}
+//									this.myAgent.send(mess);
+//									exitValue = 3;
+//									finished = true ;
+//									//s'échanger les cartes ?
 //								}
+								if( i >= neighbors.size()){
+									chemin = search(graph, root, opened);
+									next = chemin.remove(0);
+								} else { // soit on prend le voisin suivant
+									next =graph.getNode(neighbors.get(i));
+								}
 							}
 							
 						}
