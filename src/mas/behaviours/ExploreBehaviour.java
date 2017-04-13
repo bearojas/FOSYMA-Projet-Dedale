@@ -61,18 +61,48 @@ public class ExploreBehaviour extends SimpleBehaviour {
 		dijk.compute();
 
 		int min = Integer.MAX_VALUE;
-		Path shortest = null;
+		String shortest = null;
 		
 		for(String id : open){
 			double l = dijk.getPathLength(myGraph.getNode(id));
 			if(l < min){
 				min = (int) l;
-				shortest = dijk.getPath(myGraph.getNode(id));
+				shortest = id ;
 			}
 		}	
-		List<Node> shortPath = shortest.getNodePath();
+		List<Node> shortPath = dijk.getPath(myGraph.getNode(shortest)).getNodePath();
 		shortPath.remove(0);
 		return shortPath ;
+	}
+	
+	/**
+	 * Déplacement de l'agent qui suit un chemin : traite les interblocages
+	 */
+	public void followPath(){
+		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+		Node next = chemin.remove(0);
+		//TODO
+		/*
+		 * si on a pas pu se déplacer il y a un agent qui nous bloque
+		 * rentrer en communication avec lui
+		 * dans interblocage state : 0 -> attente d'un message d'interblocage aussi
+		 */
+		if(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
+			chemin.add(0,next); //pour conserver le chemin en entier, le noeud bloqué est donc le premier du chemin et destination le dernier
+			((CleverAgent)super.myAgent).setInterblocage(true);	
+			((CleverAgent)super.myAgent).setInterblocageState(0);
+			refreshAgent();
+			System.out.println("INTERBLOCAGE pour agent "+myAgent.getName()+" qui veut aller en "+next.getId());
+			System.out.println("performative: "+ACLMessage.PROPOSE);
+			final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
+			mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()+"_"+myPosition); //le noeud qui nous bloque_où on est
+			for (AID aid : ((CleverAgent)super.myAgent).getAgentList()){
+				mess.addReceiver(aid);
+			}
+			this.myAgent.send(mess);
+			exitValue = 3;
+			finished = true ;
+		}
 	}
 
 	
@@ -179,6 +209,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			ArrayList<AID> lastCom = ((CleverAgent)super.myAgent).getLastCom();
 			//si l'expéditeur est qq'un avec qui on a communiqué récemment, ignorer
 			if(msg != null && !msg.getContent().equals("ok") && !lastCom.subList(0, lastCom.size()/4).contains(msg.getSender())){
+				System.out.println("PERFORMATIVE RECU: "+msg.getPerformative()+" PERFORMATIVE ATTENDU: "+ACLMessage.REQUEST);
 				ArrayList<AID> sender = new ArrayList<AID>();
 				sender.add((AID) msg.getSender());
 				((CleverAgent) super.myAgent).setAgentsNearby(sender);
@@ -203,45 +234,14 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				//si on n'a plus de noeuds ouverts, l'exploration est finie
 				if(opened.isEmpty()){
 					finished = true;
-					System.out.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
+					System.err.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
+					this.myAgent.doDelete();
 				}
 				else{
 					step++;
 					//si on a un chemin a suivre
 					if(chemin.size() != 0){
-						Node next = chemin.remove(0);
-						//TODO
-						/*
-						 * si on a pas pu se déplacer il y a un agent qui nous bloque
-						 * rentrer en communication avec lui
-						 * dans interblocage state : 0 -> attente d'un message d'interblocage aussi
-						 */
-						if(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-							chemin.add(0,next); //pour conserver le chemin en entier, le noeud bloqué est donc le premier du chemin et destination le dernier
-							((CleverAgent)super.myAgent).setInterblocage(true);	
-							((CleverAgent)super.myAgent).setInterblocageState(0);
-							refreshAgent();
-							System.out.println("INTERBLOCAGE pour agent "+myAgent.getName()+" qui veut aller en "+next.getId());
-							final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
-							mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()+"_"+myPosition); //le noeud qui nous boque_où on est
-							for (AID aid : ((CleverAgent)super.myAgent).getAgentList()){
-								mess.addReceiver(aid);
-							}
-							this.myAgent.send(mess);
-							exitValue = 3;
-							finished = true ;
-						}
-						// tant qu'on n'a pas pu se dï¿½placer....
-//						while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-//							// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
-//							System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
-//							
-//							Graph tempGraph = Graphs.clone(graph);
-//							tempGraph.removeNode(next);	
-//							chemin = search(tempGraph,root, opened);
-//							next = chemin.remove(0);
-//							
-//						}
+						followPath();
 					}
 					else{
 						//si on a un voisin ouvert 
@@ -253,29 +253,14 @@ public class ExploreBehaviour extends SimpleBehaviour {
 							//TODO
 							// si on ne peut pas aller vers son voisin
 							while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-								i++ ;
-//								// si on a fait toute la liste des voisins, on est en interblocage
-//								if( i >= neighbors.size()){
-//									((CleverAgent)super.myAgent).setInterblocageState(0);
-//									((CleverAgent)super.myAgent).setInterblocage(true);	
-//									refreshAgent();
-//									System.out.println("INTERBLOCAGE pour agent "+myAgent.getName()+" qui veut aller en "+next.getId());
-//									final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
-//									mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()+"_"+myPosition); //le noeud qui nous boque_où on est
-//									for (AID aid : ((CleverAgent)super.myAgent).getAgentList()){
-//										mess.addReceiver(aid);
-//									}
-//									this.myAgent.send(mess);
-//									exitValue = 3;
-//									finished = true ;
-//									//s'échanger les cartes ?
-//								}
-								if( i >= neighbors.size()){
+								if( i >= neighbors.size()-1){
 									chemin = search(graph, root, opened);
-									next = chemin.remove(0);
-								} else { // soit on prend le voisin suivant
-									next =graph.getNode(neighbors.get(i));
-								}
+									followPath();
+									break;
+								} 			
+								i++ ;
+								next =graph.getNode(neighbors.get(i));
+								System.out.println(myAgent.getLocalName()+" va en "+ next.getId());						
 							}
 							
 						}
@@ -283,17 +268,8 @@ public class ExploreBehaviour extends SimpleBehaviour {
 							// si pas de voisins
 							//on cherche le noeud le plus proche						
 							chemin = search(graph, root, opened);
-							Node next = chemin.remove(0); // on enlï¿½ve le noeud vers lequel on va aller pour ne pas le garder dans le chemin ï¿½ faire
-							
-							while(!((mas.abstractAgent)this.myAgent).moveTo(next.getId())){
-								System.out.println("recherche d'un chemin qui ne passe pas par "+next.getId());
-								// creation d'un graphe temporaire qui oblige ï¿½ chercher un autre chemin sans passer par le noeud bloquï¿½
-								Graph tempGraph = Graphs.clone(graph);							
-								tempGraph.removeNode(next);
-								chemin = search(tempGraph,root, opened);
-								next = chemin.remove(0);
-								
-							}
+							System.out.println(this.myAgent.getLocalName()+" : Je cherche un nouveau chemin");
+							followPath();
 							
 						}					
 					}

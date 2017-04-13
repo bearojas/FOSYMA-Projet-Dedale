@@ -238,7 +238,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						System.out.println(receivers.toString());
 					}
 					// si limite de r�ponses attendues atteint 
-					if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()-1){
+					if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()){
 						((CleverAgent) super.myAgent).setCommunicationState(3);
 						cptWait=0;
 					}
@@ -292,7 +292,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				
 				//agent gives its current position	
 				String myPos=((mas.abstractAgent)this.myAgent).getCurrentPosition();
-				ACLMessage msge = new ACLMessage(ACLMessage.REQUEST);
+				ACLMessage msge = new ACLMessage(ACLMessage.AGREE);
 				msge.setSender(this.myAgent.getAID());
 				
 				if (myPos!=""){
