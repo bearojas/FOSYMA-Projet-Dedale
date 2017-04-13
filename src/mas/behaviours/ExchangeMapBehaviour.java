@@ -217,7 +217,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					
 			case 1 :
 					// regarde sa boite aux lettres et attend un message de réponse (timeout)	
-					final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
+					final MessageTemplate msgTemplate = MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REQUEST), MessageTemplate.MatchPerformative(ACLMessage.AGREE));	
 					final ACLMessage answer = this.myAgent.receive(msgTemplate);
 				
 					//TODO rafraichir la liste ? la supprimer de temps en temps ?
