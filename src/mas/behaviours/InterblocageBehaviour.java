@@ -1,21 +1,23 @@
 package mas.behaviours;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
-import org.graphstream.algorithm.Dijkstra;
-import org.graphstream.graph.Graph;
-import org.graphstream.graph.Node;
-
 import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+
 import mas.agents.CleverAgent;
 import mas.agents.Data;
+
+import org.graphstream.algorithm.Dijkstra;
+import org.graphstream.graph.Graph;
+import org.graphstream.graph.Node;
 
 public class InterblocageBehaviour extends SimpleBehaviour{
 
@@ -39,16 +41,16 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 	/*
 	 * SANS PRISE EN COMPTE DES TRESORS
 	 * state 0 : attente d'un message d'interblocage puis passe en 1
-	 * state 1 : echange des map à tous les agents en interblocage 
+	 * state 1 : echange des map ï¿½ tous les agents en interblocage 
 	 * state 2 : -> si regle le conflit, interblocage = false pour les deux
 	 * 			 -> sinon on passe en state 3
-	 * state intermediaire : définition des priorités ?
-	 * state 3 : chacun regarde la plus courte distance à un carrefour
-	 * 			 les agents envoient leur distance à un Agent coordinateur
-	 * 			 le coordinateur décide qui bouge 
+	 * state intermediaire : dï¿½finition des prioritï¿½s ?
+	 * state 3 : chacun regarde la plus courte distance ï¿½ un carrefour
+	 * 			 les agents envoient leur distance ï¿½ un Agent coordinateur
+	 * 			 le coordinateur dï¿½cide qui bouge 
 	 * 			 si doit bouger -> state 4
 	 * 			 sinon state 5
-	 * state 4 : on doit bouger : setChemin avec le chemin qu'on a trouvé jusqu'au carrefour
+	 * state 4 : on doit bouger : setChemin avec le chemin qu'on a trouvï¿½ jusqu'au carrefour
 	 * 			 interblocage = false et on change le interblocage de l'autre agent aussi
 	 * 			 on revient dans Explore
 	 * state 5 : attente jusqu'au changement de interblocage par l'autre et on revient dans Explore
@@ -66,7 +68,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				//attendre le message de l'agent avec qui on est en interblocage
 				final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);			
 				ACLMessage answer = this.myAgent.receive(msgTemplate);
-				// le message reçu contiendra : notre position_la position de l'autre
+				// le message reï¿½u contiendra : notre position_la position de l'autre
 				if(answer != null && answer.getContent().equals(((mas.abstractAgent)super.myAgent).getCurrentPosition()+"_"+((CleverAgent)super.myAgent).getChemin().get(0))){
 					agent = answer.getSender(); 
 					((CleverAgent)super.myAgent).setInterblocageState(state+1);
@@ -75,14 +77,14 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 					block(1500);
 					cptWait++;
 				}
-				//si temps d'attente trop long on revient à Explore
+				//si temps d'attente trop long on revient ï¿½ Explore
 				if(cptWait==waitingTime && answer==null){
 					((CleverAgent)super.myAgent).setInterblocage(false);
 				}
 				break ;
 				
 			case 1: //ECHANGE DES GRAPHES		
-				// on passe directement à l'étape 3 de ExchangeMap car on communique avec l'agent avec qui on est en interblocage
+				// on passe directement ï¿½ l'ï¿½tape 3 de ExchangeMap car on communique avec l'agent avec qui on est en interblocage
 				((CleverAgent)super.myAgent).setCommunicationState(3);
 				ArrayList <AID> list = new ArrayList<AID>(); list.add(agent);
 				((CleverAgent)super.myAgent).setAgentsNearby(list);
@@ -94,42 +96,50 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				//regarder les maps voir si le noeud destination n'est plus interessant (SANS TRESOR)
 				List<Node> chemin = ((CleverAgent)super.myAgent).getChemin();
 				Node dest =chemin.get(chemin.size()-1);
-				ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+				ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
 				msg.setSender(super.myAgent.getAID()); msg.addReceiver(agent);
 				
 				if (((CleverAgent)super.myAgent).getGraph().getNode(dest.getId()).getAttribute("state").equals("closed")){
-					//a ce stade, un des deux agents peut etre débloqué
-					// si un des deux est débloqué ça va peut etre débloquer l'autre apres le deplacement du premier 
-					// donc des que un est débloqué -> débloquer l'autre
-					// if je suis débloqué : 
+					//a ce stade, un des deux agents peut etre dï¿½bloquï¿½
+					// si un des deux est dï¿½bloquï¿½ ï¿½a va peut etre dï¿½bloquer l'autre apres le deplacement du premier 
+					// donc des que un est dï¿½bloquï¿½ -> dï¿½bloquer l'autre
+					// if je suis dï¿½bloquï¿½ : 
 					// 		- envoie un message "good"					
 					msg.setContent("good"); 	
 				}
-					// else je ne suis pas débloqué :
+					// else je ne suis pas dï¿½bloquï¿½ :
 					// 		- envoie un message "bad"
 				else {
 					msg.setContent("bad"); 
 				}
 				
-				super.myAgent.send(msg);
-				// attendre réception message
+				((mas.abstractAgent)this.myAgent).sendMessage(msg);
+				// attendre rï¿½ception message
 				ACLMessage response ;
 				do {
-					response = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+					//TODO
+					System.out.println(super.myAgent.getLocalName()+" attends un 'good' or 'bad' ");
+					response = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
 				} while(response == null || (response!=null && response.getSender() !=agent)) ;
 				//if bad et moi aussi : state 3  else : finish
-				if(response.getContent().equals("bad") && msg.getContent().equals("bad"))
+				if(response.getContent().equals("bad") && msg.getContent().equals("bad")){
 					((CleverAgent)super.myAgent).setInterblocageState(state+1);
-				else 
+					System.out.println("passage au case 3: ECHANGE DE DISTANCES AU CARREFOUR");
+				}
+					
+				else{ 
+					System.out.println("FIN de l'INTERBLOCAGE");
 					((CleverAgent)super.myAgent).setInterblocage(false);
+					((CleverAgent)super.myAgent).setInterblocageState(0);
+				}
 				
 				break ;
 				
 			case 3 : // ECHANGE DES DISTANCES AU CARREFOUR LE PLUS PROCHE (2 messages)
-				//les deux agents sont présents et n'ont pas réglé leur interblocage
+				//les deux agents sont prï¿½sents et n'ont pas rï¿½glï¿½ leur interblocage
 				// calcul de la distance au carrefour le plus proche ( carrefour[0] = distance ; carrefour[1] : le chemin )
 				List<Node> carrefour = calculDistanceCarrefour() ;
-				// dans l'ordre alphabétique le premier agent est celui qui devra envoyer le message avec sa distance ...
+				// dans l'ordre alphabï¿½tique le premier agent est celui qui devra envoyer le message avec sa distance ...
 				if(super.myAgent.getLocalName().compareTo(agent.getLocalName())<0){
 					ACLMessage message = new ACLMessage(ACLMessage.INFORM_REF);
 					message.setSender(super.myAgent.getAID()); message.addReceiver(agent);
@@ -140,8 +150,8 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					super.myAgent.send(message);
-					//...puis attendre la réponse de l'agent2
+					((mas.abstractAgent)this.myAgent).sendMessage(message);
+					//...puis attendre la rï¿½ponse de l'agent2
 					message = null ;
 					do {
 						message = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM_REF));
@@ -186,11 +196,11 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-						super.myAgent.send(decideWhoMoves);
+						((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
 						((CleverAgent)super.myAgent).setInterblocageState(5);
 					} else {
 						decideWhoMoves.setContent("not you");
-						super.myAgent.send(decideWhoMoves);
+						((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
 						try {
 							otherAgentPath =( (Data<Integer,List<String>,Integer,Integer>) decideWhoMoves.getContentObject()).getSecond() ;
 						} catch (UnreadableException e) {
@@ -204,25 +214,35 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				break ;
 				
 			case 4 : //L'AGENT DOIT BOUGER
-				// il faut ajouter un noeud voisin au noeud carrefour pour le déplacement
+				// il faut ajouter un noeud voisin au noeud carrefour pour le dï¿½placement
 				// le noeud ne doit pas etre sur le chemin de l'autre agent
 				String idCarrefour = (cheminCarrefour.isEmpty())? ((mas.abstractAgent)super.myAgent).getCurrentPosition() : cheminCarrefour.get(cheminCarrefour.size()-1).getId() ; 
 				
 				Iterator<Node> carrefourIterator = ((CleverAgent)super.myAgent).getGraph().getNode(idCarrefour).getNeighborNodeIterator();
+				ArrayList<Node> neighbours = new ArrayList<Node>();
+				Node neighbour;
+				
+				Random r= new Random();
+				int index;
+				
 				while (carrefourIterator.hasNext()){
-					Node neighbour = carrefourIterator.next();
-					if(!otherAgentPath.contains(neighbour.getId())){
-						cheminCarrefour.add(neighbour);
-						break;
-					}
+					neighbours.add(carrefourIterator.next());
 				}
 				
+				do{
+					index = r.nextInt(neighbours.size());
+					neighbour = neighbours.get(index);
+				}while(otherAgentPath.contains(neighbour.getId()));
+				
+				cheminCarrefour.add(neighbour);
+				
+				
 				((CleverAgent)super.myAgent).setChemin(cheminCarrefour);
-				//signaler à l'autre qu'il peut bouger ?
+				//signaler ï¿½ l'autre qu'il peut bouger ?
 				ACLMessage youCanMoveMsg = new ACLMessage(ACLMessage.CONFIRM);
 				youCanMoveMsg.setSender(super.myAgent.getAID()); youCanMoveMsg.addReceiver(agent);
 				youCanMoveMsg.setContent("move");
-				super.myAgent.send(youCanMoveMsg);
+				((mas.abstractAgent)this.myAgent).sendMessage(youCanMoveMsg);
 				((CleverAgent)super.myAgent).setInterblocageState(6);
 				((CleverAgent)super.myAgent).setInterblocage(false);
 				break ;
@@ -232,7 +252,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				if(moveAnswer!=null){
 					//attend un peu avant de bouger
 					block(1000);
-					((CleverAgent)super.myAgent).setInterblocageState(6);
+					((CleverAgent)super.myAgent).setInterblocageState(0);
 					((CleverAgent)super.myAgent).setInterblocage(false);
 				}
 				break;
@@ -246,8 +266,8 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 	
 	
 	/**
-	 * Calcule la distance entre l'agent et le carrefour (noeud à au moins 3 branches) le plus proche.
-	 * @return un tableau contenant la distance du plus court chemin à un carrefour et ce chemin
+	 * Calcule la distance entre l'agent et le carrefour (noeud ï¿½ au moins 3 branches) le plus proche.
+	 * @return un tableau contenant la distance du plus court chemin ï¿½ un carrefour et ce chemin
 	 */
 	public List<Node> calculDistanceCarrefour() {
 		
@@ -283,7 +303,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 	
 	/**
 	 * Convertit une liste de noeuds en liste d'identifiant de ces noeuds
-	 * @param path : la liste de noeuds à convertir
+	 * @param path : la liste de noeuds ï¿½ convertir
 	 * @return la liste des identifiants
 	 */
 	public List<String> convertNodeToId(List<Node> path){

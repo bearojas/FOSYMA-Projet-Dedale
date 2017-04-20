@@ -117,24 +117,31 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		return finalGraph ;
 	}
 	
-	/**
+	/**TODO: Verifier POURQUOI POURQUOI A-T-ON DES de states null?
 	 * fonction permettant de concatener 2 graphes, et donc de mettre ï¿½ jour ses informations 
 	 * @param receivedGraph
 	 */
 	public void graphsFusion(Graph receivedGraph){
+		ArrayList<String> opened = ((CleverAgent) super.myAgent).getOpened();
 		for (Node n : receivedGraph){
 			Node old_node = myGraph.getNode(n.getId());
 			// si on ignorait l'existence de ce noeud, on l'ajoute ï¿½ notre graphe ainsi que ses attributs
 			if (old_node == null){
 				Node new_node = myGraph.addNode(n.getId());
 				new_node.addAttribute("state", (String)n.getAttribute("state"));
+				//on rajoute les noeuds ouverts de l'autre agent
+				if( n.getAttribute("state")==null || ((String)n.getAttribute("state")).equals("opened"))
+					opened.add(new_node.getId());
+				
 				new_node.addAttribute("content", (n.getAttribute("content")==null)? new ArrayList<Attribute>(): n.getAttribute("content"));
 				new_node.addAttribute("haveBeenThere",(n.getAttribute("haveBeenThere")==null)? new ArrayList<AID>(): n.getAttribute("haveBeenThere") );
 				
 			} else { // si le noeud existait, on compare les attributs
 				//si ce noeud a ete explore, on le marque closed (ne change rien s'il l'ï¿½tait deja)
-				if (n.getAttribute("state")==null || n.getAttribute("state").equals("closed"))
+				if (n.getAttribute("state")==null || n.getAttribute("state").equals("closed")){
 					old_node.setAttribute("state", "closed");
+					opened.remove(old_node.getId());
+				}
 				
 				List<AID>lOld_node = ( ((List<AID>)old_node.getAttribute("haveBeenThere"))==null)?new ArrayList<AID>():((List<AID>)old_node.getAttribute("haveBeenThere"));
 				List<AID>lnew_node = ( ((List<AID>)n.getAttribute("haveBeenThere"))==null)?new ArrayList<AID>():((List<AID>)n.getAttribute("haveBeenThere"));
@@ -171,16 +178,18 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					}
 				}
 			}
-			
-			// on parcourt tous les arcs du receivedGraph
-			for(Edge e : receivedGraph.getEachEdge()){
-				String id0 = e.getNode0().getId();
-				String id1 = e.getNode1().getId();
-				//si l'arc n'existe pas, on l'ajoute 
-				if(myGraph.getEdge(id0+id1) == null && myGraph.getEdge(id1+id0) == null)
-					myGraph.addEdge(id0+id1, id0, id1);
-			}
 		}
+		((CleverAgent) super.myAgent).setOpened(opened);
+		
+		// on parcourt tous les arcs du receivedGraph
+		for(Edge e : receivedGraph.getEachEdge()){
+			String id0 = e.getNode0().getId();
+			String id1 = e.getNode1().getId();
+			//si l'arc n'existe pas, on l'ajoute 
+			if(myGraph.getEdge(id0+id1) == null && myGraph.getEdge(id1+id0) == null)
+				myGraph.addEdge(id0+id1, id0, id1);
+		}
+		
 	}
 	
 	@Override
@@ -222,18 +231,19 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				
 					//TODO rafraichir la liste ? la supprimer de temps en temps ?
 					/*
-					 * on regarde la sous liste constituée des 25% premiers agents récemment contactés
+					 * on regarde la sous liste constituï¿½e des 25% premiers agents rï¿½cemment contactï¿½s
 					 * si le gars en fait partie, on ne le contactera pas
 					 */
 					int mostRecent = ((CleverAgent) super.myAgent).getLastCom().size()/4 ;
 					if (answer  != null) {
 						System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
-						if(receivers.indexOf(answer.getSender())==-1 && !((CleverAgent) super.myAgent).getLastCom().subList(0, mostRecent).contains(answer.getSender()) ){
+//						if(receivers.indexOf(answer.getSender())==-1 && !((CleverAgent) super.myAgent).getLastCom().subList(0, mostRecent).contains(answer.getSender()) ){
+						if(receivers.indexOf(answer.getSender())==-1){ 	
 							receivers.add((AID) answer.getSender());
 							ACLMessage okMsg = new ACLMessage(ACLMessage.REQUEST);
 							okMsg.setContent("ok"); okMsg.setSender(this.myAgent.getAID());
 							okMsg.addReceiver(answer.getSender());
-							myAgent.send(okMsg);
+							((mas.abstractAgent)this.myAgent).sendMessage(okMsg);
 						}
 						System.out.println(receivers.toString());
 					}
@@ -246,7 +256,6 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					else if(cptWait >= nbWaitAnswer){
 						if(receivers.isEmpty()){
 							cptWait=0;
-							receivers.clear();
 							((CleverAgent) super.myAgent).setCommunicationState(5);
 						}
 						else{
@@ -324,7 +333,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				while(cancelMsg !=null){
 					System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancelMsg.getSender().getLocalName());
 					receivers.remove(cancelMsg.getSender());
-					cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));			
 				}
 				//TODO
 				if( ((CleverAgent)this.myAgent).isInterblocage()==true){
@@ -364,7 +373,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						msgs.add(tmp);
 //					System.out.println(myAgent.getLocalName()+" NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size()+"  "+receivers.toString());
 					block(1000);
-	
+					System.out.println("nb msg recu:"+msgs.size()+ "  nb msg attendus : "+receivers.size() );
 					//si on reï¿½oit message d'annulation
 					ACLMessage cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
 
@@ -385,19 +394,19 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 							
 							Graph receivedGraph = hashmapToGraph(hmap);
 							graphsFusion(receivedGraph);
-							/*
-							 * pour chaque message reçu, on a donc communiqué avec l'expéditeur
+							/*TODO:
+							 * pour chaque message reï¿½u, on a donc communiquï¿½ avec l'expï¿½diteur
 							 * on l'ajoute donc en tete de notre liste de comm
 							 */
-							ArrayList<AID> comm=((CleverAgent) super.myAgent).getLastCom();
-							int index = comm.indexOf(receivedMap.getSender());
-							if(index==-1){
-								comm.add(0, receivedMap.getSender());			
-							} else {
-								comm.remove(index);
-								comm.add(0, receivedMap.getSender());
-							}
-							((CleverAgent) super.myAgent).setLastCom(comm);
+//							ArrayList<AID> comm=((CleverAgent) super.myAgent).getLastCom();
+//							int index = comm.indexOf(receivedMap.getSender());
+//							if(index==-1){
+//								comm.add(0, receivedMap.getSender());			
+//							} else {
+//								comm.remove(index);
+//								comm.add(0, receivedMap.getSender());
+//							}
+//							((CleverAgent) super.myAgent).setLastCom(comm);
 							receivers.remove(receivedMap.getSender());
 							refreshAgent();
 						} catch (UnreadableException e) {
@@ -434,6 +443,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	public boolean done() {
 		if(((CleverAgent) super.myAgent).getCommunicationState() == 5){
 			cptWait = 0;
+			receivers.clear();
 			return true;
 		}
 		return false;

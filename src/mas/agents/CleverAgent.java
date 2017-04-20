@@ -31,6 +31,9 @@ public class CleverAgent extends abstractAgent{
 	private int communicationState = 0;
 	private boolean interblocage = false;
 	private int interblocageState = 0;
+	private boolean moved = true;
+	private String lastPosition = "";
+	
 	//derniers agents avec qui ont a communiqué
 	private ArrayList<AID> lastCom= new ArrayList<AID>();
 	
@@ -138,6 +141,22 @@ public class CleverAgent extends abstractAgent{
 
 	public void setInterblocageState(int interblocageState) {
 		this.interblocageState = interblocageState;
+	}
+
+	public String getLastPosition() {
+		return lastPosition;
+	}
+
+	public void setLastPosition(String lastPosition) {
+		this.lastPosition = lastPosition;
+	}
+
+	public boolean getMoved() {
+		return moved;
+	}
+
+	public void setMoved(boolean moved) {
+		this.moved = moved;
 	}
 
 
