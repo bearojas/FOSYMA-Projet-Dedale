@@ -365,15 +365,16 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				// on attend les graph des autres
 				// on convertit les maps reçues en graphe
 				// et on fusionne chaque graph avec le notre
-
+				//TODO mise en place d'un timeout
 				// attendre toutes les maps des agents contact�s
-				while(msgs.size()< receivers.size()){
+				while(msgs.size()< receivers.size() && cptWait < nbWaitAnswer*2){
 					ACLMessage tmp = (myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM)));
 					if (tmp!=null)
 						msgs.add(tmp);
 //					System.out.println(myAgent.getLocalName()+" NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size()+"  "+receivers.toString());
 					block(1000);
 					System.out.println("nb msg recu:"+msgs.size()+ "  nb msg attendus : "+receivers.size() );
+					cptWait++;
 					//si on re�oit message d'annulation
 					ACLMessage cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
 

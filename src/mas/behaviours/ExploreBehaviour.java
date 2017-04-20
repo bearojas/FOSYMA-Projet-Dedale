@@ -87,16 +87,15 @@ public class ExploreBehaviour extends SimpleBehaviour {
 		 * rentrer en communication avec lui
 		 * dans interblocage state : 0 -> attente d'un message d'interblocage aussi
 		 */
-		if(!((CleverAgent) super.myAgent).getMoved()){
+		if(!((CleverAgent) this.myAgent).getMoved()){
 			chemin.add(0,next); //pour conserver le chemin en entier, le noeud bloqu� est donc le premier du chemin et destination le dernier
-			((CleverAgent)super.myAgent).setInterblocage(true);	
-			((CleverAgent)super.myAgent).setInterblocageState(0);
+			((CleverAgent)this.myAgent).setInterblocage(true);	
+			((CleverAgent)this.myAgent).setInterblocageState(0);
 			refreshAgent();
 			System.out.println("INTERBLOCAGE pour agent "+myAgent.getName()+" qui veut aller en "+next.getId());
-			System.out.println("performative: "+ACLMessage.PROPOSE);
 			final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
 			mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()+"_"+myPosition); //le noeud qui nous bloque_o� on est
-			for (AID aid : ((CleverAgent)super.myAgent).getAgentList()){
+			for (AID aid : ((CleverAgent)this.myAgent).getAgentList()){
 				mess.addReceiver(aid);
 			}
 			((mas.abstractAgent)this.myAgent).sendMessage(mess);
@@ -258,9 +257,13 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			} else {
 				//si on n'a plus de noeuds ouverts, l'exploration est finie
 				if(opened.isEmpty()){
-					finished = true;
-					System.err.println("Exploration finie: "+graph.getNodeCount()+"noeuds");
-					this.myAgent.doDelete();
+					//finished = true;
+					System.err.println("Exploration finie pour "+myAgent.getLocalName()+": "+graph.getNodeCount()+"noeuds");
+					block(2000);
+					Random r= new Random();
+					int moveId=r.nextInt(lobs.size());
+					((mas.abstractAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());
+					//this.myAgent.doDelete();
 				}
 				else{
 					step++;

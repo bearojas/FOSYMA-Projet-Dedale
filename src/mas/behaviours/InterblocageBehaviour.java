@@ -69,9 +69,9 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);			
 				ACLMessage answer = this.myAgent.receive(msgTemplate);
 				// le message re�u contiendra : notre position_la position de l'autre
-				if(answer != null && answer.getContent().equals(((mas.abstractAgent)super.myAgent).getCurrentPosition()+"_"+((CleverAgent)super.myAgent).getChemin().get(0))){
+				if(answer != null && answer.getContent().equals(((mas.abstractAgent)this.myAgent).getCurrentPosition()+"_"+((CleverAgent)this.myAgent).getChemin().get(0))){
 					agent = answer.getSender(); 
-					((CleverAgent)super.myAgent).setInterblocageState(state+1);
+					((CleverAgent)this.myAgent).setInterblocageState(state+1);
 				} else {
 					answer = null;
 					block(1500);
@@ -79,27 +79,29 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				}
 				//si temps d'attente trop long on revient � Explore
 				if(cptWait==waitingTime && answer==null){
-					((CleverAgent)super.myAgent).setInterblocage(false);
+					System.out.println("Temps d'attente trop long pour "+this.myAgent.getLocalName()+" qui quitte l'interblocage");
+					((CleverAgent)this.myAgent).setInterblocage(false);
 				}
 				break ;
 				
 			case 1: //ECHANGE DES GRAPHES		
 				// on passe directement � l'�tape 3 de ExchangeMap car on communique avec l'agent avec qui on est en interblocage
-				((CleverAgent)super.myAgent).setCommunicationState(3);
+				System.out.println(this.myAgent.getLocalName()+" en interblocage avec "+agent.getLocalName());
+				((CleverAgent)this.myAgent).setCommunicationState(3);
 				ArrayList <AID> list = new ArrayList<AID>(); list.add(agent);
-				((CleverAgent)super.myAgent).setAgentsNearby(list);
-				((CleverAgent)super.myAgent).setInterblocageState(state+1);
+				((CleverAgent)this.myAgent).setAgentsNearby(list);
+				((CleverAgent)this.myAgent).setInterblocageState(state+1);
 				exit_value=1;		
 				break;
 				
 			case 2 : //VOIR SI L'INTERBLOCAGE EST REGLE
 				//regarder les maps voir si le noeud destination n'est plus interessant (SANS TRESOR)
-				List<Node> chemin = ((CleverAgent)super.myAgent).getChemin();
+				List<Node> chemin = ((CleverAgent)this.myAgent).getChemin();
 				Node dest =chemin.get(chemin.size()-1);
 				ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
-				msg.setSender(super.myAgent.getAID()); msg.addReceiver(agent);
+				msg.setSender(this.myAgent.getAID()); msg.addReceiver(agent);
 				
-				if (((CleverAgent)super.myAgent).getGraph().getNode(dest.getId()).getAttribute("state").equals("closed")){
+				if (((CleverAgent)this.myAgent).getGraph().getNode(dest.getId()).getAttribute("state").equals("closed")){
 					//a ce stade, un des deux agents peut etre d�bloqu�
 					// si un des deux est d�bloqu� �a va peut etre d�bloquer l'autre apres le deplacement du premier 
 					// donc des que un est d�bloqu� -> d�bloquer l'autre
@@ -114,23 +116,28 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				}
 				
 				((mas.abstractAgent)this.myAgent).sendMessage(msg);
+				System.out.println(super.myAgent.getLocalName()+" envoie un message "+msg.getContent()+" a "+agent.getLocalName());
 				// attendre r�ception message
 				ACLMessage response ;
 				do {
 					//TODO
-					System.out.println(super.myAgent.getLocalName()+" attends un 'good' or 'bad' ");
-					response = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
-				} while(response == null || (response!=null && response.getSender() !=agent)) ;
+					//la condition while ne doit pas etre bonne : ne sort jamais de la boucle meme quand response n'est pas null...
+					//System.out.println(super.myAgent.getLocalName()+" attends un 'good' or 'bad' ");
+					response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
+					if(response!=null)
+						System.out.println(response.getSender().getLocalName());
+					
+				} while(response == null || (response.getSender() !=agent)) ;
 				//if bad et moi aussi : state 3  else : finish
 				if(response.getContent().equals("bad") && msg.getContent().equals("bad")){
-					((CleverAgent)super.myAgent).setInterblocageState(state+1);
+					((CleverAgent)this.myAgent).setInterblocageState(state+1);
 					System.out.println("passage au case 3: ECHANGE DE DISTANCES AU CARREFOUR");
 				}
 					
 				else{ 
 					System.out.println("FIN de l'INTERBLOCAGE");
-					((CleverAgent)super.myAgent).setInterblocage(false);
-					((CleverAgent)super.myAgent).setInterblocageState(0);
+					((CleverAgent)this.myAgent).setInterblocage(false);
+					((CleverAgent)this.myAgent).setInterblocageState(0);
 				}
 				
 				break ;
