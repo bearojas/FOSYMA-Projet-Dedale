@@ -30,9 +30,14 @@ public class CleverAgent extends abstractAgent{
 	private List<Node> chemin = new ArrayList<Node>();
 	private ArrayList<AID> agentsNearby = new ArrayList<AID>();
 	private ArrayList<String> opened = new ArrayList<String>();
+	
+	private ArrayList<String> treasures = new ArrayList<String>();
+	private ArrayList<String> diamonds = new ArrayList<String>();
+	
 	// {aid : (position_initiale, capacite_courante, type) }
 	private HashMap<AID, ArrayList<String>> agentList = new HashMap<AID, ArrayList<String>>();
 	private String firstPosition;
+	
 	private int communicationState = 0;
 	private boolean interblocage = false;	
 	private int interblocageState = 0;
@@ -91,8 +96,23 @@ public class CleverAgent extends abstractAgent{
 		this.opened = opened;
 	}
 
-
 	
+	public ArrayList<String> getTreasures() {
+		return treasures;
+	}
+
+	public void setTreasures(ArrayList<String> treasures) {
+		this.treasures = treasures;
+	}
+
+	public ArrayList<String> getDiamonds() {
+		return diamonds;
+	}
+
+	public void setDiamonds(ArrayList<String> diamonds) {
+		this.diamonds = diamonds;
+	}
+
 	public int getCommunicationState() {
 		return communicationState;
 	}

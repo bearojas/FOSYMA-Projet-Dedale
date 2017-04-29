@@ -1,8 +1,5 @@
 package mas.behaviours;
 
-import java.util.ArrayList;
-
-import jade.core.AID;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;

@@ -178,6 +178,22 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 								}
 							}	
 						}
+						
+						if(a.getName().equals("Diamonds")){
+							int i =-1;
+							if (old_obs!= null)
+								i = old_obs.indexOf("Diamonds");
+							if(i == -1){
+								old_node.setAttribute("content", obs);
+
+							}
+							else{
+								int oldDiamondsValue = (int) old_obs.get(i).getValue();
+								if((int)a.getValue() < oldDiamondsValue ){
+									old_obs.get(i).setValue(a.getValue());
+								}
+							}	
+						}
 							
 					}
 				}

@@ -1,15 +1,7 @@
 package mas.behaviours;
 
-import jade.core.AID;
 import jade.core.behaviours.FSMBehaviour;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import mas.agents.CleverAgent;
-
-import org.graphstream.graph.Graph;
-import org.graphstream.graph.Node;
 
 public class MainBehaviour extends FSMBehaviour{
 
@@ -18,12 +10,12 @@ public class MainBehaviour extends FSMBehaviour{
 	public MainBehaviour(final mas.abstractAgent myagent) {
 		super(myagent);
 		
-		//STATE
+		//STATES
 		registerFirstState(new ExploreBehaviour(myagent), "EXPLORE");
 		registerState(new ExchangeMapBehaviour(myagent), "EXCHANGEMAP");
 		registerState(new InterblocageBehaviour(myagent), "INTERBLOCAGE");
 		
-		//TRANSITION
+		//TRANSITIONS
 		registerDefaultTransition("EXPLORE", "EXPLORE", new String[]{"EXPLORE"});
 
 		registerTransition("EXPLORE", "EXCHANGEMAP", 2, new String[]{"EXCHANGEMAP"});

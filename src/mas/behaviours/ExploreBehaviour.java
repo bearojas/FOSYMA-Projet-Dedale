@@ -178,6 +178,25 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			Node root = graph.addNode(myPosition);
 			root.addAttribute("state", "closed");
 			root.addAttribute("content",lattribute);
+			
+			//mise a jour de liste des tresors et diamants
+			if(lattribute != null){
+				for(Attribute a: lattribute){
+					if(a.getName().equals("Treasure")){
+						ArrayList<String> treasures = ((CleverAgent)this.myAgent).getTreasures();
+						if(!treasures.contains(root.getId()))
+							treasures.add(root.getId());
+						((CleverAgent)this.myAgent).setTreasures(treasures);
+					}
+					else if(a.getName().equals("Diamonds")){
+						ArrayList<String> diamonds = ((CleverAgent)this.myAgent).getDiamonds();
+						if(!diamonds.contains(root.getId()))
+							diamonds.add(root.getId());
+						((CleverAgent)this.myAgent).setDiamonds(diamonds);
+					}
+				}
+			}
+			
 			root.addAttribute("haveBeenThere", agentsWhoKnowNode);
 			opened.remove(myPosition);
 			
