@@ -287,21 +287,21 @@ public class Principal {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-//		
-//		c = containerList.get("container0");
-//		agentName="Explo5";
-//		try {
-//
-//
-//			Object[] objtab=new Object[]{env};//used to give informations to the agent
-//			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
-//			agentList.add(ag);
-//			System.out.println(agentName+" launched");
-//		} catch (StaleProxyException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
+		
+		c = containerList.get("container0");
+		agentName="Explo5";
+		try {
+
+
+			Object[] objtab=new Object[]{env};//used to give informations to the agent
+			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
+			agentList.add(ag);
+			System.out.println(agentName+" launched");
+		} catch (StaleProxyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 //		c = containerList.get("container0");
 //		agentName="Explo6";		
 //		try {

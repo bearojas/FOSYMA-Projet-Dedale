@@ -29,6 +29,8 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private int step = 0;
 	private int immo = 0;
 	private final int MAX_STEP = 5;
+	//TODO A SUPPRIMER mais on peut le laisser en fait
+	private int FIN=0;
 	/**
 	 * exit value : 0 -> explore
 	 * 				2 -> communication Time 
@@ -71,7 +73,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			}
 		}	
 		List<Node> shortPath = dijk.getPath(myGraph.getNode(shortest)).getNodePath();
-		shortPath.remove(0);
+		//shortPath.remove(0);
 		return shortPath ;
 	}
 	
@@ -80,7 +82,11 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	 */
 	public void followPath(){
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
-		Node next = chemin.remove(0);
+		System.out.println(myAgent.getName()+" "+chemin.toString());
+		if(myPosition.equals(chemin.get(0).getId()))
+			chemin.remove(0);
+		System.out.println(myAgent.getName()+" "+chemin.toString());
+		Node next = chemin.get(0);
 		//TODO
 		/*
 		 * si on a pas pu se d�placer il y a un agent qui nous bloque
@@ -88,7 +94,8 @@ public class ExploreBehaviour extends SimpleBehaviour {
 		 * dans interblocage state : 0 -> attente d'un message d'interblocage aussi
 		 */
 		if(!((CleverAgent) this.myAgent).getMoved()){
-			chemin.add(0,next); //pour conserver le chemin en entier, le noeud bloqu� est donc le premier du chemin et destination le dernier
+			//chemin.add(0,next); //pour conserver le chemin en entier, le noeud bloqu� est donc le premier du chemin et destination le dernier
+			
 			((CleverAgent)this.myAgent).setInterblocage(true);	
 			((CleverAgent)this.myAgent).setInterblocageState(0);
 			refreshAgent();
@@ -99,13 +106,16 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				mess.addReceiver(aid);
 			}
 			((mas.abstractAgent)this.myAgent).sendMessage(mess);
+			((CleverAgent)this.myAgent).setAgentsNearby(new ArrayList<AID>());
 			exitValue = 3;
 			step = 0;
 			immo = 0;
 			finished = true ;
 		}
-		else
+		else{
 			((mas.abstractAgent)this.myAgent).moveTo(next.getId());
+		}
+			
 	}
 
 	
@@ -116,6 +126,12 @@ public class ExploreBehaviour extends SimpleBehaviour {
 		exitValue= 0 ;
 		
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+		
+		graph = ((CleverAgent) myAgent).getGraph();
+		opened = ((CleverAgent) myAgent).getOpened();
+		chemin = ((CleverAgent) myAgent).getChemin();
+		//attention: cache l'exception IdAlreadyInUse
+		graph.setStrict(false);
 		
 		//si on a pas changé de position et on était déjà en exloration -> on a pas pu se deplacer
 		if(((CleverAgent)super.myAgent).getLastPosition().equals(myPosition) && step >  0)
@@ -131,6 +147,8 @@ public class ExploreBehaviour extends SimpleBehaviour {
 
 			//List of observable from the agent's current position
 			List<Couple<String,List<Attribute>>> lobs=((mas.abstractAgent)this.myAgent).observe();
+			if(!opened.isEmpty())
+				System.out.println(this.myAgent.getLocalName()+" -- list of observables: "+lobs);
 			
 			//on determine l'indice de la position courante dans lobs 
 			int posIndex = 0;
@@ -150,7 +168,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 //				System.out.println("valeur:"+a.getValue());
 //			}
 			
-			System.out.println(this.myAgent.getLocalName()+" -- list of observables: "+lobs);
 			
 			// create node from current position
 			// delete current node from opened
@@ -170,19 +187,13 @@ public class ExploreBehaviour extends SimpleBehaviour {
 					Node n = graph.addNode(idNeighbor);
 					//n.addAttribute("ui.label", n.getId());
 					
-					if(n.getAttribute("state") == null){
+					if(n.getAttribute("state") == null || !n.getAttribute("state").equals("closed")){
 						neighbors.add(idNeighbor);
 						n.addAttribute("state", "opened");
-						opened.add(idNeighbor);
+						if(!opened.contains(idNeighbor)) 
+							opened.add(idNeighbor);
 					}					
 					
-					
-//					if(n.getAttribute("state") == null || !n.getAttribute("state").equals("closed")){
-//						neighbors.add(idNeighbor);
-//						n.addAttribute("state", "opened");
-//						if(!opened.contains(idNeighbor)) 
-//							opened.add(idNeighbor);
-//					}
 					
 					graph.addEdge(myPosition+idNeighbor, root, n);
 				}
@@ -222,10 +233,14 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				System.out.println("lobs after picking "+lobs2);
 			}
 			
-			//If there is a message in the inbox (not an "accecpt com" message)
+			//If there is a message in the inbox of someone trying to exchange maps
 			//save the sender and finish this behaviour
 			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
 			final ACLMessage msg = this.myAgent.receive(msgTemplate);
+			
+			//If someone is blocked by this agent
+			final MessageTemplate msgTemp = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);			
+//			final ACLMessage blockMsg = this.myAgent.receive(msgTemp);
 			
 			// TODO: lastCom
 			//ArrayList<AID> lastCom = ((CleverAgent)super.myAgent).getLastCom();
@@ -243,7 +258,45 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				exitValue = 2;
 				System.out.println(this.myAgent.getLocalName()+" is in Explore and has a new message in the mailbox "+msg.getContent());
 			}
-			
+//			//TODO: facon de vider la boite aux lettres de messages d'interblocage 
+//			//si on est en interblocage on change de behaviour sinon on ignore
+//			else if(blockMsg != null){
+//				if(chemin.size() != 0 && blockMsg.getContent().equals( myPosition+"_"+chemin.get(0))){
+//					((CleverAgent)this.myAgent).setInterblocageState(1); //on passe directement en 1					
+//					((CleverAgent)this.myAgent).setInterblocage(true);	
+//					
+//					AID sender = blockMsg.getSender();
+//
+//					ArrayList<AID> receiver = new ArrayList<AID>();
+//					receiver.add(sender);
+//					((CleverAgent)this.myAgent).setAgentsNearby(receiver);
+//					
+//					System.out.println("INTERBLOCAGE avec "+sender.toString()+" pour agent "+myAgent.getName()+" qui veut aller en "+chemin.get(0));
+//					final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
+//					mess.setSender(this.myAgent.getAID()); mess.setContent(chemin.get(0)+"_"+myPosition); //le noeud qui nous bloque_ou on est
+//					mess.addReceiver(sender);
+//					((mas.abstractAgent)this.myAgent).sendMessage(mess);
+//
+//					refreshAgent();
+//					exitValue = 3;
+//					step = 0;
+//					immo = 0;
+//					finished = true ;
+//					
+//				}
+//				//si pas en interblocage mais l'autre agent est dans un voisin, on enleve ce voisin pour eviter d'y aller
+//				else{
+//					for(String v: neighbors){
+//						if( blockMsg.getContent().equals( myPosition+"_"+v)){
+//							neighbors.remove(v);
+//							break;
+//						}
+//					}
+//					
+//				}
+//				
+//			}
+					
 			//tous les MAX_STEP temps, on �change la map a ceux proches de nous			
 			else if(step>=MAX_STEP){
 				((CleverAgent) super.myAgent).setCommunicationState(0);
@@ -257,21 +310,25 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			} else {
 				//si on n'a plus de noeuds ouverts, l'exploration est finie
 				if(opened.isEmpty()){
+					if(FIN == 0)
 					//finished = true;
-					System.err.println("Exploration finie pour "+myAgent.getLocalName()+": "+graph.getNodeCount()+"noeuds");
-					block(2000);
+						System.err.println("Exploration finie pour "+myAgent.getLocalName()+": "+graph.getNodeCount()+"noeuds");
+					this.block(10000);
 					Random r= new Random();
 					int moveId=r.nextInt(lobs.size());
 					((mas.abstractAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());
+					FIN++;
 					//this.myAgent.doDelete();
 				}
 				else{
 					step++;
 					//si on a un chemin a suivre
-					if(chemin.size() != 0){
+					//et que ce chemin ne reduit pas a ma position
+					if(chemin.size() > 1 || (!chemin.isEmpty() && !chemin.get(0).getId().equals(myPosition))){
 						followPath();
 					}
 					else{
+						chemin = new ArrayList<Node>();
 						//si on a un voisin ouvert 
 						if(neighbors.size()!= 0){
 							Random r= new Random();
@@ -287,6 +344,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 							}
 							else{
 								((mas.abstractAgent)this.myAgent).moveTo(next.getId());
+								refreshAgent();
 							}
 							
 						}
@@ -313,6 +371,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	}
 	
 	public int onEnd(){
+		refreshAgent();
 		return exitValue;
 	}
 	

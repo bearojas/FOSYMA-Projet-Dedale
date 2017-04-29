@@ -22,7 +22,7 @@ import org.graphstream.graph.Node;
 public class InterblocageBehaviour extends SimpleBehaviour{
 
 	private static final long serialVersionUID = 1L;
-	private final int waitingTime = 5;
+	private final int waitingTime = 7;
 	private int cptWait = 0;
 	private AID agent ; 
 	private List<String> otherAgentPath ;
@@ -36,6 +36,10 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 	
 	public InterblocageBehaviour(final mas.abstractAgent myagent) {
 		super(myagent);
+	}
+	
+	public void setAgent(AID agent) {
+		this.agent = agent;
 	}
 	//TODO
 	/*
@@ -63,11 +67,22 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 		
 		switch(state) {
 		
-			case 0 : // ATTENTE DU MESSAGE DE L'AGENT EN INTERBLOCAGE AVEC NOUS
+			case 0 : 
+				//si on a des vieux maps on les efface
+				if(cptWait==0){
+					ACLMessage mapMessage;
+					do{
+						mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+					}while(mapMessage!=null);
+				}
+				
+				// ATTENTE DU MESSAGE DE L'AGENT EN INTERBLOCAGE AVEC NOUS
 				System.out.println(super.myAgent.getLocalName()+": Je suis en interblocage");
+				
 				//attendre le message de l'agent avec qui on est en interblocage
 				final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);			
 				ACLMessage answer = this.myAgent.receive(msgTemplate);
+				
 				// le message re�u contiendra : notre position_la position de l'autre
 				if(answer != null && answer.getContent().equals(((mas.abstractAgent)this.myAgent).getCurrentPosition()+"_"+((CleverAgent)this.myAgent).getChemin().get(0))){
 					agent = answer.getSender(); 
@@ -84,7 +99,13 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				}
 				break ;
 				
-			case 1: //ECHANGE DES GRAPHES		
+			case 1: //ECHANGE DES GRAPHES
+				
+				//TODO: si on a recu un message d'interblocage dans Explore -> initialiser agent
+				if(!((CleverAgent)this.myAgent).getAgentsNearby().isEmpty()){
+					agent = ((CleverAgent)this.myAgent).getAgentsNearby().get(0);
+				}
+				
 				// on passe directement � l'�tape 3 de ExchangeMap car on communique avec l'agent avec qui on est en interblocage
 				System.out.println(this.myAgent.getLocalName()+" en interblocage avec "+agent.getLocalName());
 				((CleverAgent)this.myAgent).setCommunicationState(3);
@@ -100,6 +121,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				Node dest =chemin.get(chemin.size()-1);
 				ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
 				msg.setSender(this.myAgent.getAID()); msg.addReceiver(agent);
+				
 				
 				if (((CleverAgent)this.myAgent).getGraph().getNode(dest.getId()).getAttribute("state").equals("closed")){
 					//a ce stade, un des deux agents peut etre d�bloqu�
@@ -118,16 +140,23 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				((mas.abstractAgent)this.myAgent).sendMessage(msg);
 				System.out.println(super.myAgent.getLocalName()+" envoie un message "+msg.getContent()+" a "+agent.getLocalName());
 				// attendre r�ception message
-				ACLMessage response ;
-				do {
-					//TODO
-					//la condition while ne doit pas etre bonne : ne sort jamais de la boucle meme quand response n'est pas null...
-					//System.out.println(super.myAgent.getLocalName()+" attends un 'good' or 'bad' ");
+				ACLMessage response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
+				
+				//TODO: rajouter timeout 
+				while(response == null || !(response.getSender().equals(agent))){
 					response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
 					if(response!=null)
-						System.out.println(response.getSender().getLocalName());
-					
-				} while(response == null || (response.getSender() !=agent)) ;
+						System.out.println("case 2 interblocage: "+super.myAgent.getLocalName()+" a recu "+response.getSender().getLocalName());
+				}
+//				do {
+//					//TODO
+//					//la condition while ne doit pas etre bonne : ne sort jamais de la boucle meme quand response n'est pas null...
+//					//System.out.println(super.myAgent.getLocalName()+" attends un 'good' or 'bad' ");
+//					response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
+//					if(response!=null)
+//						System.out.println(response.getSender().getLocalName());
+//					
+//				} while(response == null || (response.getSender() !=agent)) ;
 				//if bad et moi aussi : state 3  else : finish
 				if(response.getContent().equals("bad") && msg.getContent().equals("bad")){
 					((CleverAgent)this.myAgent).setInterblocageState(state+1);
@@ -138,6 +167,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 					System.out.println("FIN de l'INTERBLOCAGE");
 					((CleverAgent)this.myAgent).setInterblocage(false);
 					((CleverAgent)this.myAgent).setInterblocageState(0);
+					((CleverAgent)this.myAgent).setChemin(new ArrayList<Node>());
 				}
 				
 				break ;
@@ -158,6 +188,12 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 						e.printStackTrace();
 					}
 					((mas.abstractAgent)this.myAgent).sendMessage(message);
+					try {
+						System.out.println(super.myAgent.getLocalName()+" envoie sa distance carrefour "+message.getContentObject().toString()+" a "+agent.getLocalName());
+					} catch (UnreadableException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 					//...puis attendre la r�ponse de l'agent2
 					message = null ;
 					do {
@@ -204,12 +240,15 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 							e.printStackTrace();
 						}
 						((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
+						System.out.println(super.myAgent.getLocalName()+" envoie 'c est a toi de bouger' a "+agent.getLocalName());
+						
 						((CleverAgent)super.myAgent).setInterblocageState(5);
 					} else {
 						decideWhoMoves.setContent("not you");
 						((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
+						System.out.println(super.myAgent.getLocalName()+" envoie 'c est a moi d bouger' a "+agent.getLocalName());
 						try {
-							otherAgentPath =( (Data<Integer,List<String>,Integer,Integer>) decideWhoMoves.getContentObject()).getSecond() ;
+							otherAgentPath =( (Data<Integer,List<String>,Integer,Integer>) distanceMsg.getContentObject()).getSecond() ;
 						} catch (UnreadableException e) {
 							e.printStackTrace();
 						}

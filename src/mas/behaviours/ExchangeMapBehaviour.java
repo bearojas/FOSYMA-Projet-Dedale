@@ -56,10 +56,10 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 	
 	/**
 	 *  fonction de transformation d'un graphe vers une HashMap
-	 *  cl� de la HashMap : identifiant du noeud
-	 *  valeur pour chaque cl� : les voisins du noeud, l'�tat du noeud et les observations de ce noeud	
+	 *  cle de la HashMap : identifiant du noeud
+	 *  valeur pour chaque cle : les voisins du noeud, l'etat du noeud, les observations de ce noeud et les agent ayant deja visite 	
 	 * @param graphToSend :  graph to send to other agents
-	 * @param recever : the recever of this message AID
+	 * @param receiver : the receiver of this message AID
 	 * @return a hashmap representing the graph
 	 */
 	public HashMap<String,Data<List<String>,String, List<Attribute>, List<AID>>> graphToHashmap(Graph graphToSend, AID receiver){
@@ -201,6 +201,12 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		
 		switch(state){
 			case 0:
+				//si on a des vieux maps on les efface
+				ACLMessage mapMessage;
+				do{
+					mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+				}while(mapMessage!=null);
+				
 				//agent gives its current position	
 				String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 				ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
@@ -220,9 +226,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				((CleverAgent) super.myAgent).setCommunicationState(state+1);
 				break ;
 						
-					//envoie un seul message
-					// si on reçoit un message on r�envoie un message request : ok
-					// comme �a si quelqu'un arrive apr�s et qu'on a re�u son message c'est bon
+
+					//si un agent n'etait pas dans le rayon de communication lors de l'envoi du message case 0 
+					//et qu'il arrive en periode de communication, il sera notifie des agents qui ont recu le request avec un OK 
 					
 			case 1 :
 					// regarde sa boite aux lettres et attend un message de réponse (timeout)	
@@ -296,6 +302,13 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				// au dernier tour de communication, Agent peut envoyer un message "end"
 				// dans le case 3 ou 4 si on re�oit un message "end" de notre contact
 				// on supprime ce contact de la liste de recevers
+				
+				//si on a des vieux maps on les efface
+
+				do{
+					mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+				}while(mapMessage!=null);
+				
 				receivers = ((CleverAgent) this.myAgent).getAgentsNearby();
 				((CleverAgent) this.myAgent).setAgentsNearby(new ArrayList<AID>());
 				
@@ -367,13 +380,14 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				// et on fusionne chaque graph avec le notre
 				//TODO mise en place d'un timeout
 				// attendre toutes les maps des agents contact�s
-				while(msgs.size()< receivers.size() && cptWait < nbWaitAnswer*2){
+				while(msgs.size()< receivers.size() && cptWait < nbWaitAnswer*10){
+//				while(msgs.size()< receivers.size()){
 					ACLMessage tmp = (myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM)));
 					if (tmp!=null)
 						msgs.add(tmp);
 //					System.out.println(myAgent.getLocalName()+" NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size()+"  "+receivers.toString());
 					block(1000);
-					System.out.println("nb msg recu:"+msgs.size()+ "  nb msg attendus : "+receivers.size() );
+					//System.out.println("nb msg recu:"+msgs.size()+ "  nb msg attendus : "+receivers.size() );
 					cptWait++;
 					//si on re�oit message d'annulation
 					ACLMessage cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
@@ -416,10 +430,15 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						
 					}		
 				}
-				
-				cptWait=0;
+	
 				msgs.clear();
 				receivers.clear();
+//				if( cptWait >= nbWaitAnswer*2 && ((CleverAgent)this.myAgent).isInterblocage()){
+//					((CleverAgent)this.myAgent).setInterblocageState(6);
+//					((CleverAgent)this.myAgent).setInterblocage(false);
+//					exit_value = 1;
+//				}
+				cptWait=0;
 				//TODO
 				if(((CleverAgent)this.myAgent).isInterblocage())
 					exit_value=1;
@@ -437,6 +456,15 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 
 	@Override
 	public int onEnd() {
+		ACLMessage mapMessage;
+		do{
+			mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+		}while(mapMessage!=null);
+		
+		do{
+			mapMessage = this.myAgent.receive(MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REQUEST), MessageTemplate.MatchPerformative(ACLMessage.AGREE)));
+		}while(mapMessage!=null);
+		
 		return exit_value;
 	}
 	
