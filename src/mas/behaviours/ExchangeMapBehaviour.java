@@ -4,9 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map.Entry;
-
-import javax.swing.SingleSelectionModel;
 
 import org.graphstream.graph.Edge;
 import org.graphstream.graph.Graph;
@@ -76,9 +75,9 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				finalMap.put(n.getId(), new Data(new ArrayList<String>(),(String)n.getAttribute("state"),lattribute,lVisitor));
 				//TODO
 				/*
-				 * On a envoyé une liste contenant le nom de l'agent récepteur lVisitor
-				 * l'agent qui reçoit n'a donc rien a changé
-				 * l'agent qui envoit ne notifie pas qu'il a deja envoyé, il modifiera quand l'autre agent lui renverra la liste avec son nom
+				 * On a envoyï¿½ une liste contenant le nom de l'agent rï¿½cepteur lVisitor
+				 * l'agent qui reï¿½oit n'a donc rien a changï¿½
+				 * l'agent qui envoit ne notifie pas qu'il a deja envoyï¿½, il modifiera quand l'autre agent lui renverra la liste avec son nom
 				 */
 				//n.setAttribute("haveBeenThere", lVisitor);
 			}
@@ -212,19 +211,20 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
 				}while(mapMessage!=null);
 				
-				//agent gives its current position	
+				//agent gives its first position and its current capacity	
 				String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 				ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
 				msg.setSender(this.myAgent.getAID());
 				
 				if (myPosition!=""){
 					System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
-					msg.setContent(myPosition);
+					msg.setContent(((CleverAgent)this.myAgent).getFirstPosition()+":"+((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
 	
-					//on ajoute tous les agents ï¿½ la liste des destinataires (evite les doublons)
-					for(AID id: ((CleverAgent)super.myAgent).getAgentList()){
-						if(receivers.indexOf(id)==-1)
-							msg.addReceiver(id);				
+					//on ajoute tous les agents a la liste des destinataires (evite les doublons)					
+					Set<AID> cles = ((CleverAgent)this.myAgent).getAgentList().keySet();		
+					for (AID aid : cles){
+						if(receivers.indexOf(aid)==-1)
+						msg.addReceiver(aid);
 					}
 					((mas.abstractAgent)this.myAgent).sendMessage(msg);
 				}
@@ -245,16 +245,31 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					 * on regarde la sous liste constituï¿½e des 25% premiers agents rï¿½cemment contactï¿½s
 					 * si le gars en fait partie, on ne le contactera pas
 					 */
-					int mostRecent = ((CleverAgent) super.myAgent).getLastCom().size()/4 ;
+					//int mostRecent = ((CleverAgent) super.myAgent).getLastCom().size()/4 ;
 					if (answer  != null) {
 						System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
+						AID sender = answer.getSender();
+						String content = answer.getContent();
 //						if(receivers.indexOf(answer.getSender())==-1 && !((CleverAgent) super.myAgent).getLastCom().subList(0, mostRecent).contains(answer.getSender()) ){
-						if(receivers.indexOf(answer.getSender())==-1){ 	
-							receivers.add((AID) answer.getSender());
+						if(receivers.indexOf(sender)==-1){
+							
+							//envoi un message OK
+							receivers.add(sender);
 							ACLMessage okMsg = new ACLMessage(ACLMessage.REQUEST);
 							okMsg.setContent("ok"); okMsg.setSender(this.myAgent.getAID());
-							okMsg.addReceiver(answer.getSender());
+							okMsg.addReceiver(sender);
 							((mas.abstractAgent)this.myAgent).sendMessage(okMsg);
+												
+							HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)this.myAgent).getAgentList();
+							//si je n'ai pas sa position initiale (et sa capacite)
+							if( agentList.get(sender).get(0) == "" && !content.equals("ok")){
+								String[] tokens = content.split("[:]");
+								agentList.get(sender).set(0, tokens[0]); //position
+								agentList.get(sender).set(1, tokens[1]); //capacite
+								((CleverAgent)this.myAgent).setAgentList(agentList);
+								System.err.println(this.myAgent.getLocalName()+" a initialise pos: "+tokens[0]+" et cap: "+tokens[1]+" de "+sender.getLocalName());
+							}
+							
 						}
 						System.out.println(receivers.toString());
 					}
@@ -279,10 +294,12 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 						finalComm.setContent("end communication");
 						finalComm.setSender(this.myAgent.getAID());
 						
-						for(AID aid: ((CleverAgent) super.myAgent).getAgentList()){
+						Set<AID> cles = ((CleverAgent)this.myAgent).getAgentList().keySet();		
+						for (AID aid : cles){
 							if(!receivers.contains(aid))
-								finalComm.addReceiver(aid);				
+								finalComm.addReceiver(aid);
 						}
+						
 						((mas.abstractAgent)this.myAgent).sendMessage(finalComm);
 						System.out.println(myAgent.getLocalName()+" annule");
 						
@@ -317,13 +334,13 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				receivers = ((CleverAgent) this.myAgent).getAgentsNearby();
 				((CleverAgent) this.myAgent).setAgentsNearby(new ArrayList<AID>());
 				
-				//agent gives its current position	
+				//agent gives its first position and its current capacity	
 				String myPos=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 				ACLMessage msge = new ACLMessage(ACLMessage.AGREE);
 				msge.setSender(this.myAgent.getAID());
 				
 				if (myPos!=""){
-					msge.setContent(myPos);
+					msge.setContent(((CleverAgent)this.myAgent).getFirstPosition()+":"+((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
 	
 					//on ajoute les agents qui ont envoyÃ© de message 
 					for(AID id: receivers){

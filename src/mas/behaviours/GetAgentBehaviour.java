@@ -1,6 +1,8 @@
 package mas.behaviours;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 
 import mas.agents.CleverAgent;
 import jade.core.behaviours.OneShotBehaviour;
@@ -37,10 +39,11 @@ public class GetAgentBehaviour extends OneShotBehaviour {
 		dfd.addServices(sd);
 		try {
 			DFAgentDescription[] result = DFService.search(super.myAgent, dfd);
-			ArrayList<AID> agentList = new ArrayList<AID>();
+			HashMap<AID, ArrayList<String>> agentList = new HashMap<AID, ArrayList<String>>();
+			ArrayList<String> infos = new ArrayList<String>(Arrays.asList("","",""));	
 			for (DFAgentDescription ad : result){
 				if(!ad.getName().equals(this.myAgent.getAID()))
-					agentList.add(ad.getName());
+					agentList.put(ad.getName(), infos);
 			}
 			((CleverAgent)super.myAgent).setAgentList(agentList);
 			

@@ -1,17 +1,20 @@
 package mas.agents;
 
 import jade.core.AID;
-import jade.core.behaviours.FSMBehaviour;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+
+import mas.abstractAgent;
+import mas.behaviours.GetAgentBehaviour;
+import mas.behaviours.InscriptionBehaviour;
+import mas.behaviours.MainBehaviour;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
 
-import mas.abstractAgent;
-import mas.behaviours.*;
 import env.Environment;
 
 public class CleverAgent extends abstractAgent{
@@ -27,9 +30,11 @@ public class CleverAgent extends abstractAgent{
 	private List<Node> chemin = new ArrayList<Node>();
 	private ArrayList<AID> agentsNearby = new ArrayList<AID>();
 	private ArrayList<String> opened = new ArrayList<String>();
-	private ArrayList<AID> agentList = new ArrayList<AID>();
+	// {aid : (position_initiale, capacite_courante, type) }
+	private HashMap<AID, ArrayList<String>> agentList = new HashMap<AID, ArrayList<String>>();
+	private String firstPosition;
 	private int communicationState = 0;
-	private boolean interblocage = false;
+	private boolean interblocage = false;	
 	private int interblocageState = 0;
 	private boolean moved = true;
 	private String lastPosition = "";
@@ -54,6 +59,22 @@ public class CleverAgent extends abstractAgent{
 		this.chemin = chemin;
 	}
 	
+	public HashMap<AID, ArrayList<String>> getAgentList() {
+		return agentList;
+	}
+
+	public void setAgentList(HashMap<AID, ArrayList<String>> agentList) {
+		this.agentList = agentList;
+	}
+	
+	public String getFirstPosition() {
+		return firstPosition;
+	}
+
+	public void setFirstPosition(String firstPosition) {
+		this.firstPosition = firstPosition;
+	}
+
 	public ArrayList<AID> getAgentsNearby() {
 		return agentsNearby;
 	}
@@ -70,13 +91,7 @@ public class CleverAgent extends abstractAgent{
 		this.opened = opened;
 	}
 
-	public ArrayList<AID> getAgentList() {
-		return agentList;
-	}
 
-	public void setAgentList(ArrayList<AID> newList){
-		agentList=newList;
-	}
 	
 	public int getCommunicationState() {
 		return communicationState;

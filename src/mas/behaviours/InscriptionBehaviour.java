@@ -8,6 +8,7 @@ import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
+import mas.agents.CleverAgent;
 
 public class InscriptionBehaviour extends OneShotBehaviour{
 	
@@ -32,7 +33,8 @@ public class InscriptionBehaviour extends OneShotBehaviour{
 		DFService.register(super.myAgent, dfd );
 		} catch (FIPAException fe) { fe.printStackTrace(); }
 		
-		//System.out.println("AID:"+super.myAgent.getAID());
+		//initialisation de la position initiale et la capacite
+		((CleverAgent) super.myAgent).setFirstPosition(((CleverAgent) super.myAgent).getCurrentPosition());
 		
 	}
 

@@ -6,8 +6,10 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import mas.agents.CleverAgent;
 
@@ -82,10 +84,10 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	 */
 	public void followPath(){
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
-		System.out.println(myAgent.getName()+" "+chemin.toString());
+
 		if(myPosition.equals(chemin.get(0).getId()))
 			chemin.remove(0);
-		System.out.println(myAgent.getName()+" "+chemin.toString());
+
 		Node next = chemin.get(0);
 		//TODO
 		/*
@@ -102,7 +104,9 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			System.out.println("INTERBLOCAGE pour agent "+myAgent.getName()+" qui veut aller en "+next.getId());
 			final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
 			mess.setSender(this.myAgent.getAID()); mess.setContent(next.getId()+"_"+myPosition); //le noeud qui nous bloque_o� on est
-			for (AID aid : ((CleverAgent)this.myAgent).getAgentList()){
+			
+			Set<AID> cles = ((CleverAgent)this.myAgent).getAgentList().keySet();		
+			for (AID aid : cles){
 				mess.addReceiver(aid);
 			}
 			((mas.abstractAgent)this.myAgent).sendMessage(mess);
@@ -216,6 +220,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				case TREASURE:
 					System.out.println("My current backpack capacity is:"+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
 					System.out.println("Value of the treasure on the current position: "+a.getValue());
+					System.out.println("Value of the treasure on the current position: "+a.getName());
 					System.out.println("The agent grabbed :"+((mas.abstractAgent)this.myAgent).pick());
 					System.out.println("the remaining backpack capacity is: "+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
 					System.out.println("The value of treasure on the current position: (unchanged before a new call to observe()): "+a.getValue());
@@ -239,7 +244,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			final ACLMessage msg = this.myAgent.receive(msgTemplate);
 			
 			//If someone is blocked by this agent
-			final MessageTemplate msgTemp = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);			
+//			final MessageTemplate msgTemp = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);			
 //			final ACLMessage blockMsg = this.myAgent.receive(msgTemp);
 			
 			// TODO: lastCom
@@ -247,17 +252,32 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			
 			//si l'exp�diteur est qq'un avec qui on a communiqu� r�cemment, ignorer
 			//if(msg != null && !msg.getContent().equals("ok") && !lastCom.subList(0, lastCom.size()/4).contains(msg.getSender())){
+			
 			if(msg != null && !msg.getContent().equals("ok")){
 				ArrayList<AID> sender = new ArrayList<AID>();
 				sender.add((AID) msg.getSender());
 				((CleverAgent) super.myAgent).setAgentsNearby(sender);
 				((CleverAgent) super.myAgent).setCommunicationState(2);
 				refreshAgent();
+				
+				String content = msg.getContent();
+				HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)this.myAgent).getAgentList();
+				//si je n'ai pas sa position initiale (et sa capacite)
+				if( agentList.get(sender.get(0)).get(0) == "" && !content.equals("ok")){
+					String[] tokens = content.split("[:]");
+					agentList.get(sender.get(0)).set(0, tokens[0]); //position
+					agentList.get(sender.get(0)).set(1, tokens[1]); //capacite
+					((CleverAgent)this.myAgent).setAgentList(agentList);
+					System.err.println(this.myAgent.getLocalName()+" a initialise pos: "+tokens[0]+" et cap: "+tokens[1]+" de "+sender.get(0).getLocalName());
+				}
+								
 				step = 0;
 				finished = true;
 				exitValue = 2;
 				System.out.println(this.myAgent.getLocalName()+" is in Explore and has a new message in the mailbox "+msg.getContent());
 			}
+			
+			
 //			//TODO: facon de vider la boite aux lettres de messages d'interblocage 
 //			//si on est en interblocage on change de behaviour sinon on ignore
 //			else if(blockMsg != null){
@@ -297,7 +317,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 //				
 //			}
 					
-			//tous les MAX_STEP temps, on �change la map a ceux proches de nous			
+			//tous les MAX_STEP temps, on echange la map a ceux proches de nous			
 			else if(step>=MAX_STEP){
 				((CleverAgent) super.myAgent).setCommunicationState(0);
 				refreshAgent();

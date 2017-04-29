@@ -102,10 +102,10 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				
 			case 1: //ECHANGE DES GRAPHES
 				
-				//TODO: si on a recu un message d'interblocage dans Explore -> initialiser agent
-				if(!((CleverAgent)this.myAgent).getAgentsNearby().isEmpty()){
-					agent = ((CleverAgent)this.myAgent).getAgentsNearby().get(0);
-				}
+//				//TODO: si on a recu un message d'interblocage dans Explore -> initialiser agent
+//				if(!((CleverAgent)this.myAgent).getAgentsNearby().isEmpty()){
+//					agent = ((CleverAgent)this.myAgent).getAgentsNearby().get(0);
+//				}
 				
 				// on passe directement ï¿½ l'ï¿½tape 3 de ExchangeMap car on communique avec l'agent avec qui on est en interblocage
 				System.out.println(this.myAgent.getLocalName()+" en interblocage avec "+agent.getLocalName());
@@ -123,7 +123,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
 				msg.setSender(this.myAgent.getAID()); msg.addReceiver(agent);
 				
-				
+				//System.out.println(((CleverAgent)this.myAgent).getGraph().getNode(dest.getId()).getAttribute("state"));
 				if (((CleverAgent)this.myAgent).getGraph().getNode(dest.getId()).getAttribute("state").equals("closed")){
 					//a ce stade, un des deux agents peut etre dï¿½bloquï¿½
 					// si un des deux est dï¿½bloquï¿½ ï¿½a va peut etre dï¿½bloquer l'autre apres le deplacement du premier 
@@ -145,8 +145,8 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				
 				//TODO: rajouter timeout  
 				// timeout pose pb si deux agents arrivent dans ce case, un envoie bad, attends puis quitte
-				// l'autre envoie bad, a reçu bad et part tout seul dans les next case
-				while( (response == null || !(response.getSender().equals(agent))&& cptWait<=3*waitingTime)){
+				// l'autre envoie bad, a reï¿½u bad et part tout seul dans les next case
+				while( (response == null || !(response.getSender().equals(agent)))&& cptWait<=1.5*waitingTime){
 					response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
 					cptWait++;
 					block(1000);
@@ -158,7 +158,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				if( response != null && response.getContent().equals("bad") && msg.getContent().equals("bad")){
 					cptWait=0;
 					((CleverAgent)this.myAgent).setInterblocageState(state+1);
-					System.out.println("passage au case 3: ECHANGE DE DISTANCES AU CARREFOUR");
+					System.err.println("passage au case 3: ECHANGE DE DISTANCES AU CARREFOUR");
 				}
 					
 				else{ 
@@ -198,14 +198,14 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 						message = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM_REF));
 						cptWait++;
 						block(1000);
-					} while(message ==null&& cptWait<=3*waitingTime);
+					} while(message ==null&& cptWait<=5*waitingTime);
 					
 					cptWait=0;
 					if(message != null && message.getContent().equals("not you")){
 						((CleverAgent)super.myAgent).setInterblocageState(5);
 					}else{
 						if(message==null){
-							System.out.println(myAgent.getLocalName().toString()+" n'a pas reçu le chemin de l'autre !");
+							System.out.println(myAgent.getLocalName().toString()+" ne sait pas qui doit bouger !");
 							((CleverAgent)super.myAgent).setInterblocageState(6);
 							((CleverAgent)super.myAgent).setInterblocage(false);
 						} else {
@@ -228,10 +228,10 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 						distanceMsg = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM_REF));
 						cptWait++;
 						block(1000);
-					} while(distanceMsg ==null && cptWait<=3*waitingTime);
+					} while(distanceMsg ==null && cptWait<=5*waitingTime);
 					cptWait=0;
 					if(distanceMsg==null){
-						System.out.println(myAgent.getLocalName().toString()+" n'a pas reçu qui doit bouger!");
+						System.out.println(myAgent.getLocalName().toString()+" n'a pas reï¿½u la distance!");
 						((CleverAgent)super.myAgent).setInterblocageState(6);
 						((CleverAgent)super.myAgent).setInterblocage(false);
 					} else {
@@ -384,6 +384,10 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 	@Override
 	public int onEnd() {
 		cptWait = 0;
+		ACLMessage mapMessage;
+		do{
+			mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM_REF));
+		}while(mapMessage!=null);
 		return exit_value;
 	}
 	
