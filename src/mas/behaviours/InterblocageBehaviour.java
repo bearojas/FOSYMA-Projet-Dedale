@@ -86,6 +86,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				// le message reï¿½u contiendra : notre position_la position de l'autre
 				if(answer != null && answer.getContent().equals(((mas.abstractAgent)this.myAgent).getCurrentPosition()+"_"+((CleverAgent)this.myAgent).getChemin().get(0))){
 					agent = answer.getSender(); 
+					cptWait=0;
 					((CleverAgent)this.myAgent).setInterblocageState(state+1);
 				} else {
 					answer = null;
@@ -142,23 +143,20 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				// attendre rï¿½ception message
 				ACLMessage response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
 				
-				//TODO: rajouter timeout 
-				while(response == null || !(response.getSender().equals(agent))){
+				//TODO: rajouter timeout  
+				// timeout pose pb si deux agents arrivent dans ce case, un envoie bad, attends puis quitte
+				// l'autre envoie bad, a reçu bad et part tout seul dans les next case
+				while( (response == null || !(response.getSender().equals(agent))&& cptWait<=3*waitingTime)){
 					response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
+					cptWait++;
+					block(1000);
 					if(response!=null)
 						System.out.println("case 2 interblocage: "+super.myAgent.getLocalName()+" a recu "+response.getSender().getLocalName());
 				}
-//				do {
-//					//TODO
-//					//la condition while ne doit pas etre bonne : ne sort jamais de la boucle meme quand response n'est pas null...
-//					//System.out.println(super.myAgent.getLocalName()+" attends un 'good' or 'bad' ");
-//					response = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
-//					if(response!=null)
-//						System.out.println(response.getSender().getLocalName());
-//					
-//				} while(response == null || (response.getSender() !=agent)) ;
+
 				//if bad et moi aussi : state 3  else : finish
-				if(response.getContent().equals("bad") && msg.getContent().equals("bad")){
+				if( response != null && response.getContent().equals("bad") && msg.getContent().equals("bad")){
+					cptWait=0;
 					((CleverAgent)this.myAgent).setInterblocageState(state+1);
 					System.out.println("passage au case 3: ECHANGE DE DISTANCES AU CARREFOUR");
 				}
@@ -198,18 +196,27 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 					message = null ;
 					do {
 						message = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM_REF));
-					} while(message ==null);
+						cptWait++;
+						block(1000);
+					} while(message ==null&& cptWait<=3*waitingTime);
 					
-					if(message.getContent().equals("not you")){
+					cptWait=0;
+					if(message != null && message.getContent().equals("not you")){
 						((CleverAgent)super.myAgent).setInterblocageState(5);
 					}else{
-						try {
-							otherAgentPath =( (Data<String,List<String>,Integer,Integer>) message.getContentObject()).getSecond() ;
-						} catch (UnreadableException e) {
-							e.printStackTrace();
+						if(message==null){
+							System.out.println(myAgent.getLocalName().toString()+" n'a pas reçu le chemin de l'autre !");
+							((CleverAgent)super.myAgent).setInterblocageState(6);
+							((CleverAgent)super.myAgent).setInterblocage(false);
+						} else {
+							try {
+								otherAgentPath =( (Data<String,List<String>,Integer,Integer>) message.getContentObject()).getSecond() ;
+							} catch (UnreadableException e) {
+								e.printStackTrace();
+							}
+							cheminCarrefour = carrefour;
+							((CleverAgent)super.myAgent).setInterblocageState(4);
 						}
-						cheminCarrefour = carrefour;
-						((CleverAgent)super.myAgent).setInterblocageState(4);
 					}
 						
 				} 
@@ -219,42 +226,50 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 					ACLMessage distanceMsg ;
 					do{
 						distanceMsg = super.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM_REF));
-					} while(distanceMsg ==null);
-					
-					//...puis envoie qui doit bouger
-					int otherDistance=0;
-					try {
-						otherDistance = ((Data<Integer, List<String>,Integer, Integer>)distanceMsg.getContentObject()).getFirst();
-					} catch (UnreadableException e) {
-						e.printStackTrace();
-					}
-					ACLMessage decideWhoMoves = new ACLMessage(ACLMessage.INFORM_REF);
-					decideWhoMoves.setSender(super.myAgent.getAID()); decideWhoMoves.addReceiver(agent);
-					
-					if(otherDistance < (int)carrefour.size()){
-						List<String> idChemin = convertNodeToId(((CleverAgent)super.myAgent).getChemin());
-						Data<String, List<String>,Integer,Integer> toSend = new Data<String,List<String>,Integer,Integer>("you",idChemin,null,null);
-						try {
-							decideWhoMoves.setContentObject(toSend);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-						((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
-						System.out.println(super.myAgent.getLocalName()+" envoie 'c est a toi de bouger' a "+agent.getLocalName());
-						
-						((CleverAgent)super.myAgent).setInterblocageState(5);
+						cptWait++;
+						block(1000);
+					} while(distanceMsg ==null && cptWait<=3*waitingTime);
+					cptWait=0;
+					if(distanceMsg==null){
+						System.out.println(myAgent.getLocalName().toString()+" n'a pas reçu qui doit bouger!");
+						((CleverAgent)super.myAgent).setInterblocageState(6);
+						((CleverAgent)super.myAgent).setInterblocage(false);
 					} else {
-						decideWhoMoves.setContent("not you");
-						((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
-						System.out.println(super.myAgent.getLocalName()+" envoie 'c est a moi d bouger' a "+agent.getLocalName());
+						//...puis envoie qui doit bouger
+						int otherDistance=0;
 						try {
-							otherAgentPath =( (Data<Integer,List<String>,Integer,Integer>) distanceMsg.getContentObject()).getSecond() ;
+							otherDistance = ((Data<Integer, List<String>,Integer, Integer>)distanceMsg.getContentObject()).getFirst();
 						} catch (UnreadableException e) {
 							e.printStackTrace();
 						}
-						cheminCarrefour = carrefour;
-						((CleverAgent)super.myAgent).setInterblocageState(4);
-					}				
+						ACLMessage decideWhoMoves = new ACLMessage(ACLMessage.INFORM_REF);
+						decideWhoMoves.setSender(super.myAgent.getAID()); decideWhoMoves.addReceiver(agent);
+						
+						if(otherDistance < (int)carrefour.size()){
+							List<String> idChemin = convertNodeToId(((CleverAgent)super.myAgent).getChemin());
+							Data<String, List<String>,Integer,Integer> toSend = new Data<String,List<String>,Integer,Integer>("you",idChemin,null,null);
+							try {
+								decideWhoMoves.setContentObject(toSend);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+							((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
+							System.out.println(super.myAgent.getLocalName()+" envoie 'c est a toi de bouger' a "+agent.getLocalName());
+							
+							((CleverAgent)super.myAgent).setInterblocageState(5);
+						} else {
+							decideWhoMoves.setContent("not you");
+							((mas.abstractAgent)this.myAgent).sendMessage(decideWhoMoves);
+							System.out.println(super.myAgent.getLocalName()+" envoie 'c est a moi d bouger' a "+agent.getLocalName());
+							try {
+								otherAgentPath =( (Data<Integer,List<String>,Integer,Integer>) distanceMsg.getContentObject()).getSecond() ;
+							} catch (UnreadableException e) {
+								e.printStackTrace();
+							}
+							cheminCarrefour = carrefour;
+							((CleverAgent)super.myAgent).setInterblocageState(4);
+						}
+					}
 				}
 				
 				break ;
@@ -262,6 +277,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 			case 4 : //L'AGENT DOIT BOUGER
 				// il faut ajouter un noeud voisin au noeud carrefour pour le dï¿½placement
 				// le noeud ne doit pas etre sur le chemin de l'autre agent
+				System.out.println(myAgent.getLocalName().toString()+" va jusqu'au carrefour");
 				String idCarrefour = (cheminCarrefour.isEmpty())? ((mas.abstractAgent)super.myAgent).getCurrentPosition() : cheminCarrefour.get(cheminCarrefour.size()-1).getId() ; 
 				
 				Iterator<Node> carrefourIterator = ((CleverAgent)super.myAgent).getGraph().getNode(idCarrefour).getNeighborNodeIterator();
@@ -289,6 +305,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				youCanMoveMsg.setSender(super.myAgent.getAID()); youCanMoveMsg.addReceiver(agent);
 				youCanMoveMsg.setContent("move");
 				((mas.abstractAgent)this.myAgent).sendMessage(youCanMoveMsg);
+				System.out.println(myAgent.getLocalName().toString()+" dit que "+agent.getLocalName().toString()+" peut bouger");
 				((CleverAgent)super.myAgent).setInterblocageState(6);
 				((CleverAgent)super.myAgent).setInterblocage(false);
 				break ;
@@ -298,6 +315,7 @@ public class InterblocageBehaviour extends SimpleBehaviour{
 				if(moveAnswer!=null){
 					//attend un peu avant de bouger
 					block(1000);
+					System.out.println(myAgent.getLocalName().toString()+" peut bouger !");
 					((CleverAgent)super.myAgent).setInterblocageState(0);
 					((CleverAgent)super.myAgent).setInterblocage(false);
 				}

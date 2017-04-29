@@ -74,8 +74,13 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				// avant d'envoyer on ajoute directement le nom  de l'agent qui va recevoir le noeud dans la liste des agents ayant deja visite le noeud
 				lVisitor.add(receiver);
 				finalMap.put(n.getId(), new Data(new ArrayList<String>(),(String)n.getAttribute("state"),lattribute,lVisitor));
-				//Quand on a envoyï¿½ un noeud, il faut modifier le sien en ajoutant l'agent ï¿½ qui on l'a envoyï¿½ pour s'en souvenir
-				n.setAttribute("haveBeenThere", lVisitor);
+				//TODO
+				/*
+				 * On a envoyé une liste contenant le nom de l'agent récepteur lVisitor
+				 * l'agent qui reçoit n'a donc rien a changé
+				 * l'agent qui envoit ne notifie pas qu'il a deja envoyé, il modifiera quand l'autre agent lui renverra la liste avec son nom
+				 */
+				//n.setAttribute("haveBeenThere", lVisitor);
 			}
 		}
 		//pour chaque arc, on rï¿½cupï¿½re le noeud source #e.getNode0()#,
@@ -380,7 +385,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 				// et on fusionne chaque graph avec le notre
 				//TODO mise en place d'un timeout
 				// attendre toutes les maps des agents contactï¿½s
-				while(msgs.size()< receivers.size() && cptWait < nbWaitAnswer*10){
+				while(msgs.size()< receivers.size() && cptWait < nbWaitAnswer*7){
 //				while(msgs.size()< receivers.size()){
 					ACLMessage tmp = (myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM)));
 					if (tmp!=null)

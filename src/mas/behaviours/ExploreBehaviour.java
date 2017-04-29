@@ -28,7 +28,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private ArrayList<String> opened ;
 	private int step = 0;
 	private int immo = 0;
-	private final int MAX_STEP = 5;
+	private final int MAX_STEP = 10;
 	//TODO A SUPPRIMER mais on peut le laisser en fait
 	private int FIN=0;
 	/**
@@ -313,7 +313,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 					if(FIN == 0)
 					//finished = true;
 						System.err.println("Exploration finie pour "+myAgent.getLocalName()+": "+graph.getNodeCount()+"noeuds");
-					this.block(10000);
+					block(10000);
 					Random r= new Random();
 					int moveId=r.nextInt(lobs.size());
 					((mas.abstractAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());

@@ -231,90 +231,19 @@ public class Principal {
 //
 		//Agent0 on container0
 		c = containerList.get("container0");
-		agentName="Explo1";
-		try {
+		for (int a=1; a<=7 ; a++){
+			agentName="Explo"+a;
+			try {
 
-			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
-			agentList.add(ag);
-			System.out.println(agentName+" launched");
-		} catch (StaleProxyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+				Object[] objtab=new Object[]{env};//used to give informations to the agent
+				AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
+				agentList.add(ag);
+				System.out.println(agentName+" launched");
+			} catch (StaleProxyException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
-
-
-		c = containerList.get("container0");
-		agentName="Explo2";
-		try {
-
-
-			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
-			agentList.add(ag);
-			System.out.println(agentName+" launched");
-		} catch (StaleProxyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		//Agent0 on container0
-
-		c = containerList.get("container0");
-		agentName="Explo3";
-		try {
-
-
-			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
-			agentList.add(ag);
-			System.out.println(agentName+" launched");
-		} catch (StaleProxyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		c = containerList.get("container0");
-		agentName="Explo4";
-		try {
-
-
-			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
-			agentList.add(ag);
-			System.out.println(agentName+" launched");
-		} catch (StaleProxyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		c = containerList.get("container0");
-		agentName="Explo5";
-		try {
-
-
-			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
-			agentList.add(ag);
-			System.out.println(agentName+" launched");
-		} catch (StaleProxyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-//		c = containerList.get("container0");
-//		agentName="Explo6";		
-//		try {
-//
-//
-//			Object[] objtab=new Object[]{env};//used to give informations to the agent
-//			AgentController	ag=c.createNewAgent(agentName,CleverAgent.class.getName(),objtab);
-//			agentList.add(ag);
-//			System.out.println(agentName+" launched");
-//		} catch (StaleProxyException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 		
 
 		System.out.println("Agents launched...");
