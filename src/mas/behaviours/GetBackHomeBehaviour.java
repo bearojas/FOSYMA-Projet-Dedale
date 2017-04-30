@@ -44,7 +44,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 		
 		String myPos = ((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		state = ((CleverAgent) super.myAgent).getComingbackState();
-		exitValue = 0;
+	//	exitValue = 0;
 		
 		switch(state){
 			//chercher un chemin au noeud initial
@@ -231,7 +231,8 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					((CleverAgent) super.myAgent).setComingbackState(6);
 					exitValue = 2;
 				}
-			
+				
+				break;
 				
 				
 			case 5:
@@ -263,7 +264,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 	}
 
 	public boolean done() {
-		return state == 5;
+		return state == 6;
 	}
 
 }
