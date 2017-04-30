@@ -27,6 +27,7 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 
 	private int state = 0;
 	private List<Node> path ;
+	private int exit_value = 0;
 	
 	public PickTreasureBehaviour(mas.abstractAgent myagent) {
 		super(myagent);
@@ -283,6 +284,7 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 		state = ((CleverAgent)myAgent).getPickingState();
 		String myPos = ((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		Graph myGraph = ((CleverAgent)this.myAgent).getGraph();
+		exit_value=0;
 		
 		switch(state){
 			case 0:
@@ -333,16 +335,16 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 								((CleverAgent)myAgent).setType("Treasure");
 						}
 						//l'indiquer dans le DF
-						DFAgentDescription dfd = new DFAgentDescription();
-						dfd.setName(super.myAgent.getAID()); 
-						ServiceDescription sd = new ServiceDescription();
-						sd.setType("type");
-						sd.setName(((CleverAgent)myAgent).getType());
+//						DFAgentDescription dfd = new DFAgentDescription();
+//						dfd.setName(super.myAgent.getAID()); 
+//						ServiceDescription sd = new ServiceDescription();
+//						sd.setType("type");
+//						sd.setName(((CleverAgent)myAgent).getType());
 						System.out.println(myAgent.getLocalName().toString()+" est de type "+((CleverAgent)myAgent).getType());
-						dfd.addServices(sd);
-						try {
-							DFService.register(super.myAgent, dfd );
-						} catch (FIPAException fe) { fe.printStackTrace(); }
+//						dfd.addServices(sd);
+//						try {
+//							DFService.register(super.myAgent, dfd );
+//						} catch (FIPAException fe) { fe.printStackTrace(); }
 					}
 					((CleverAgent)myAgent).setPickingState(state+1);
 				}	
@@ -356,6 +358,7 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 				//...et chercher une coalition pour ce trésor
 				System.out.println(myAgent.getLocalName().toString()+" cherche une coalition");
 				AID agentToReach = searchCoalition(((CleverAgent)myAgent).getTreasureToFind());
+				System.out.println("Meilleure coalition : "+agentToReach.getLocalName().toString());
 				String pos_nextAgent = ((CleverAgent)myAgent).getAgentList().get(agentToReach).get(0);
 				System.out.println(myAgent.getLocalName().toString()+" va contacter "+agentToReach.getLocalName().toString()+" se trouvant en "+pos_nextAgent);
 				

@@ -40,7 +40,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 
 		String myPos = ((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		state = ((CleverAgent) super.myAgent).getComingbackState();
-		
+	
 		switch(state){
 			//chercher un chemin au noeud initial
 			case 0:

@@ -34,7 +34,7 @@ public class Principal {
 
 	private static Environment env;// static ref of the real environment
 	
-	private static final int NBAGENTS = 3 ;
+	private static final int NBAGENTS = 2 ;
 
 	public static void main(String[] args){
 
