@@ -33,6 +33,8 @@ public class Principal {
 	private static Runtime rt;	
 
 	private static Environment env;// static ref of the real environment
+	
+	private static final int NBAGENTS = 2 ;
 
 	public static void main(String[] args){
 
@@ -230,7 +232,7 @@ public class Principal {
 //
 //
 		c = containerList.get("container0");
-		for (int a=1; a<=3 ; a++){
+		for (int a=1; a<= NBAGENTS  ; a++){
 			agentName="Explo"+a;
 			try {
 

@@ -229,30 +229,30 @@ public class ExploreBehaviour extends SimpleBehaviour {
 //			}
 
 			//example related to the use of the backpack for the treasure hunt
-			Boolean b=false;
-			for(Attribute a:lattribute){
-				switch (a) {
-				case TREASURE:
-					System.out.println("My current backpack capacity is:"+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
-					System.out.println("Value of the treasure on the current position: "+a.getValue());
-					System.out.println("Value of the treasure on the current position: "+a.getName());
-					System.out.println("The agent grabbed :"+((mas.abstractAgent)this.myAgent).pick());
-					System.out.println("the remaining backpack capacity is: "+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
-					System.out.println("The value of treasure on the current position: (unchanged before a new call to observe()): "+a.getValue());
-					b=true;
-					break;
-
-				default:
-					break;
-				}
-			}
-
-			//If the agent picked (part of) the treasure
-			if (b){
-				List<Couple<String,List<Attribute>>> lobs2=((mas.abstractAgent)this.myAgent).observe();//myPosition
-				System.out.println("lobs after picking "+lobs2);
-			}
-			
+//			Boolean b=false;
+//			for(Attribute a:lattribute){
+//				switch (a) {
+//				case TREASURE:
+//					System.out.println("My current backpack capacity is:"+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
+//					System.out.println("Value of the treasure on the current position: "+a.getValue());
+//					System.out.println("Value of the treasure on the current position: "+a.getName());
+//					System.out.println("The agent grabbed :"+((mas.abstractAgent)this.myAgent).pick());
+//					System.out.println("the remaining backpack capacity is: "+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
+//					System.out.println("The value of treasure on the current position: (unchanged before a new call to observe()): "+a.getValue());
+//					b=true;
+//					break;
+//
+//				default:
+//					break;
+//				}
+//			}
+//
+//			//If the agent picked (part of) the treasure
+//			if (b){
+//				List<Couple<String,List<Attribute>>> lobs2=((mas.abstractAgent)this.myAgent).observe();//myPosition
+//				System.out.println("lobs after picking "+lobs2);
+//			}
+//			
 			//If there is a message in the inbox of someone trying to exchange maps
 			//save the sender and finish this behaviour
 			final MessageTemplate msgTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);			
@@ -345,9 +345,10 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			} else {
 				//si on n'a plus de noeuds ouverts, l'exploration est finie
 				if(opened.isEmpty()){
+				System.err.println("Fin de l'exploration pour "+myAgent.getLocalName().toString());
 					exitValue = 4;
-					finished = true;
 					refreshAgent();
+					finished = true;
 //					Random r= new Random();
 //					int moveId=r.nextInt(lobs.size());
 //					((mas.abstractAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());

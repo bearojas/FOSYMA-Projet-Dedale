@@ -36,8 +36,11 @@ public class CleverAgent extends abstractAgent{
 	// {aid : (position_initiale, capacite_courante, type) }
 	private HashMap<AID, ArrayList<String>> agentList = new HashMap<AID, ArrayList<String>>();
 	private String firstPosition;
+	private String type ="";
+	private String treasureToFind="";
 	
 	private int comingbackState = 0;
+	private int pickingState = 0;
 	private int communicationState = 0;
 	private boolean interblocage = false;	
 	private int interblocageState = 0;
@@ -200,6 +203,30 @@ public class CleverAgent extends abstractAgent{
 
 	public void setMoved(boolean moved) {
 		this.moved = moved;
+	}
+
+	public int getPickingState() {
+		return pickingState;
+	}
+
+	public void setPickingState(int pickingState) {
+		this.pickingState = pickingState;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getTreasureToFind() {
+		return treasureToFind;
+	}
+
+	public void setTreasureToFind(String treasureToFind) {
+		this.treasureToFind = treasureToFind;
 	}
 
 
