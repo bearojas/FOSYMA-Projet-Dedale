@@ -1,43 +1,155 @@
 package mas.agents;
 
-import jade.core.AID;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
 
-import mas.abstractAgent;
-import mas.behaviours.*;
 import env.Environment;
+import jade.core.AID;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+import mas.abstractAgent;
+import mas.behaviours.GetAgentBehaviour;
+import mas.behaviours.InscriptionBehaviour;
+import mas.behaviours.MainBehaviour;
 
 public class CleverAgent extends abstractAgent{
 
 	/**
-	 * 
+	 * This agent registers its service (explore) with the DF
+	 * It then proceeds to explore the environment
+	 * The agent tries to communicate with others agents, to exchange information
+	 * and to coordinate with them
 	 */
 	private static final long serialVersionUID = -1784844593772918359L;
 	private Graph graph = new SingleGraph("");
 	private List<Node> chemin = new ArrayList<Node>();
+	private ArrayList<AID> agentsNearby = new ArrayList<AID>();
 	private ArrayList<String> opened = new ArrayList<String>();
-	private ArrayList<AID> agentList = new ArrayList<AID>();
+	
+	private ArrayList<String> treasures = new ArrayList<String>();
+	private ArrayList<String> diamonds = new ArrayList<String>();
+	
+	// {aid : (position_initiale, capacite_courante, type) }
+	private HashMap<AID, ArrayList<String>> agentList = new HashMap<AID, ArrayList<String>>();
+	private String firstPosition;
+	private String type ="";
+	private String treasureToFind="";
+	private AID agentToReach;
+	
+	private int comingbackState = 0;
+	private int pickingState = 0;
+	private int communicationState = 0;
+	private boolean interblocage = false;	
+	private int interblocageState = 0;
+	private boolean moved = true;
+	private String lastPosition = "";
+	
+	//derniers agents avec qui ont a communiqué
+	private ArrayList<AID> lastCom= new ArrayList<AID>();
+	
+	
+	public Graph getGraph() {
+		return graph;
+	}
 
+	public void setGraph(Graph graph) {
+		this.graph = graph;
+	}
 
-public void setAgentList(ArrayList<AID> newList){
-		agentList=newList;
+	public List<Node> getChemin() {
+		return chemin;
+	}
+
+	public void setChemin(List<Node> chemin) {
+		this.chemin = chemin;
 	}
 	
+	public HashMap<AID, ArrayList<String>> getAgentList() {
+		return agentList;
+	}
 
-	/**
-	 * This method is automatically called when "agent".start() is executed.
-	 * Consider that Agent is launched for the first time. 
-	 * 			1) set the agent attributes 
-	 *	 		2) add the behaviours
-	 *          
-	 */
+	public void setAgentList(HashMap<AID, ArrayList<String>> agentList) {
+		this.agentList = agentList;
+	}
+	
+	public String getFirstPosition() {
+		return firstPosition;
+	}
 
+	public void setFirstPosition(String firstPosition) {
+		this.firstPosition = firstPosition;
+	}
+
+	public int getComingbackState() {
+		return comingbackState;
+	}
+
+	public void setComingbackState(int comingbackState) {
+		this.comingbackState = comingbackState;
+	}
+
+	public ArrayList<AID> getAgentsNearby() {
+		return agentsNearby;
+	}
+
+	public void setAgentsNearby(ArrayList<AID> agentsNearby) {
+		this.agentsNearby = agentsNearby;
+	}
+
+	public ArrayList<String> getOpened() {
+		return opened;
+	}
+
+	public void setOpened(ArrayList<String> opened) {
+		this.opened = opened;
+	}
+
+	
+	public ArrayList<String> getTreasures() {
+		return treasures;
+	}
+
+	public void setTreasures(ArrayList<String> treasures) {
+		this.treasures = treasures;
+	}
+
+	public ArrayList<String> getDiamonds() {
+		return diamonds;
+	}
+
+	public void setDiamonds(ArrayList<String> diamonds) {
+		this.diamonds = diamonds;
+	}
+
+	public int getCommunicationState() {
+		return communicationState;
+	}
+
+	public void setCommunicationState(int communicationState) {
+		this.communicationState = communicationState;
+	}
+	
+	public boolean isInterblocage() {
+		return interblocage;
+	}
+
+	public void setInterblocage(boolean interblocage) {
+		this.interblocage = interblocage;
+	}
+	
+	public ArrayList<AID> getLastCom() {
+		return lastCom;
+	}
+
+	public void setLastCom(ArrayList<AID> lastCom) {
+		this.lastCom = lastCom;
+	}
+	
 	protected void setup(){
 
 		super.setup();
@@ -58,7 +170,7 @@ public void setAgentList(ArrayList<AID> newList){
 		//Add the behaviours
 		addBehaviour(new InscriptionBehaviour(this));
 		addBehaviour(new GetAgentBehaviour(this));
-		addBehaviour(new ExploreBehaviour(this, graph, chemin, opened));
+		addBehaviour(new MainBehaviour(this));
 
 		System.out.println("the agent "+this.getLocalName()+ " is started");
 
@@ -69,5 +181,72 @@ public void setAgentList(ArrayList<AID> newList){
 	 */
 	protected void takeDown(){
 
+	}
+
+	public int getInterblocageState() {
+		return interblocageState;
+	}
+
+	public void setInterblocageState(int interblocageState) {
+		this.interblocageState = interblocageState;
+	}
+
+	public String getLastPosition() {
+		return lastPosition;
+	}
+
+	public void setLastPosition(String lastPosition) {
+		this.lastPosition = lastPosition;
+	}
+
+	public boolean getMoved() {
+		return moved;
+	}
+
+	public void setMoved(boolean moved) {
+		this.moved = moved;
+	}
+
+	public int getPickingState() {
+		return pickingState;
+	}
+
+	public void setPickingState(int pickingState) {
+		this.pickingState = pickingState;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getTreasureToFind() {
+		return treasureToFind;
+	}
+
+	public void setTreasureToFind(String treasureToFind) {
+		this.treasureToFind = treasureToFind;
+	}
+
+	protected void takenDown(){
+		// Deregister from the yellow pages
+		try	{
+			DFService.deregister(this);
+		}
+		catch(FIPAException fe) {
+			fe.printStackTrace();
+		}
+		System.out.println(this.getLocalName()+" terminating");
+	}
+
+	public AID getAgentToReach() {
+		return agentToReach;
+	}
+
+	public void setAgentToReach(AID agentToReach) {
+		this.agentToReach = agentToReach;
 	}
 }

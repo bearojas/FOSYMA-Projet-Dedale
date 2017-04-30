@@ -1,9 +1,11 @@
 package mas.behaviours;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.graphstream.graph.Edge;
@@ -12,52 +14,104 @@ import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
 
 import env.Attribute;
-import env.Couple;
+import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import jade.lang.acl.UnreadableException;
+import mas.agents.CleverAgent;
+import mas.agents.Data;
 
 public class ExchangeMapBehaviour extends SimpleBehaviour {
+	
+	/**
+	 * An agent tries to contact other agents around it, giving its position
+	 * If it gets an answer, the agent sends its current map to every agent who replied
+	 * And it merges every map received with its own  
+	 * 
+	 */
 
 	private static final long serialVersionUID = 9088209402507795289L;
-	private boolean finished = false;
-	private int state = 0;
+	private int state;
 	private Graph myGraph ;
+	private ArrayList <AID> receivers = new ArrayList <AID>();
+	private final int nbWaitAnswer = 5;
+	private int cptWait = 0;
+	private ArrayList<ACLMessage> msgs = new ArrayList<ACLMessage>();
+	/**
+	 * exit_value : 0 -> Explore
+	 * 				1 -> Interblocage
+	 */
+	private int exit_value = 0 ;
 	
-	public ExchangeMapBehaviour(final mas.abstractAgent myagent, Graph graph){
+	public ExchangeMapBehaviour(final mas.abstractAgent myagent){
 		super(myagent);
-		myGraph = graph ;
+		myGraph = ((CleverAgent) myagent).getGraph();
+		state = 0;
 		myGraph.setStrict(false);
-	}
+	}	
 	
-	// fonction de transformation d'un graphe vers une HashMap
-	// clé de la HashMap : identifiant du noeud
-	// valeur pour chaque clé : les voisins du noeud, l'état du noeud et les observations de ce noeud
-	public HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> graphToHashmap(Graph graphToSend){
-		HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> finalMap = new HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>>();
-		//pour chaque noeud créer la clé, liste de voisins vide, et observation
+	
+
+	
+	/**
+	 *  fonction de transformation d'un graphe vers une HashMap
+	 *  cle de la HashMap : identifiant du noeud
+	 *  valeur pour chaque cle : les voisins du noeud, l'etat du noeud, les observations de ce noeud et les agent ayant deja visite 	
+	 * @param graphToSend :  graph to send to other agents
+	 * @param receiver : the receiver of this message AID
+	 * @return a hashmap representing the graph
+	 */
+	public HashMap<String,Data<List<String>,String, List<Attribute>, List<AID>>> graphToHashmap(Graph graphToSend, AID receiver){
+		HashMap<String,Data<List<String>,String, List<Attribute>, List<AID>>> finalMap = new HashMap<String,Data<List<String>,String, List<Attribute>,List<AID>>>();
+		//pour chaque noeud: creer la cle, liste de voisins vide, et observation et agents ayant deja visite ce noeud
 		for (Node n : graphToSend){
-			finalMap.put(n.getId(), new Couple(new ArrayList(), new Couple(n.getAttribute("state"),n.getAttribute("content"))));
+			//si l'agent apparait dans la liste du noeud et que ce n'est pas un noeud trï¿½sor, on peut ne pas envoyer ce noeud
+			ArrayList<AID> lVisitor = n.getAttribute("haveBeenThere")==null?new ArrayList<AID>():n.getAttribute("haveBeenThere");
+			List<Attribute> lattribute = n.getAttribute("content")==null?new ArrayList<Attribute>(): n.getAttribute("content");
+
+			if( lVisitor.indexOf(receiver) == -1 || ((List<Attribute>) lattribute).indexOf("TREASURE")!=-1){
+				// avant d'envoyer on ajoute directement le nom  de l'agent qui va recevoir le noeud dans la liste des agents ayant deja visite le noeud
+				lVisitor.add(receiver);
+				finalMap.put(n.getId(), new Data(new ArrayList<String>(),(String)n.getAttribute("state"),lattribute,lVisitor));
+				//TODO
+				/*
+				 * On a envoyï¿½ une liste contenant le nom de l'agent rï¿½cepteur lVisitor
+				 * l'agent qui reï¿½oit n'a donc rien a changï¿½
+				 * l'agent qui envoit ne notifie pas qu'il a deja envoyï¿½, il modifiera quand l'autre agent lui renverra la liste avec son nom
+				 */
+				//n.setAttribute("haveBeenThere", lVisitor);
+			}
 		}
-		//pour chaque arc, on récupère le noeud source #e.getNode0()#,
-		//dans la hashMap à cette clé on récupère la liste des voisins #getLeft()#
-		//et on y insère le noeud destination #add(e.getNode1())#
+		//pour chaque arc, on rï¿½cupï¿½re le noeud source #e.getNode0()#,
+		//dans la hashMap ï¿½ cette clï¿½ on rï¿½cupï¿½re la liste des voisins #getLeft()#
+		//et on y insï¿½re le noeud destination #add(e.getNode1())#
 		for(Edge e : graphToSend.getEachEdge()){
-			finalMap.get(e.getNode0().getId()).getLeft().add(e.getNode1().getId());
+			// si le noeud allait etre envoye, on ajoute ses voisins
+			if(finalMap.containsKey(e.getNode0().getId()))
+				finalMap.get(e.getNode0().getId()).getFirst().add(e.getNode1().getId());
 		}
 		return finalMap;
 	}
 	
-	//fonction de transformation d'une HashMap vers un graphe
-	public Graph hashmapToGraph(HashMap<String, Couple<List<String>, Couple<String, List<Attribute>>>> hMapReceived){
+	/**
+	 * fonction de transformation d'une HashMap vers un graphe
+	 * @param receivedHmap
+	 * @return a graph created from the map
+	 */
+	public Graph hashmapToGraph(HashMap<String, Data<List<String>,String, List<Attribute>,List<AID>>> receivedHmap){
 		Graph finalGraph = new SingleGraph("");
 		finalGraph.setStrict(false);
-		for (Entry<String, Couple<List<String>, Couple<String, List<Attribute>>>> entry : hMapReceived.entrySet()){
+		for (Entry<String, Data<List<String>,String, List<Attribute>,List<AID>>> entry : receivedHmap.entrySet()){
 			//creation du noeud (si il existe deja retourne le noeud existant) 
 			Node n = finalGraph.addNode(entry.getKey()) ;
 			//ajout de l'attribut (modification si deja present)
-			n.addAttribute("state", entry.getValue().getRight().getLeft());
-			n.addAttribute("content", entry.getValue().getRight().getRight());
+			n.addAttribute("state", entry.getValue().getSecond());
+			n.addAttribute("content", entry.getValue().getThird());
+			n.addAttribute("haveBeenThere", entry.getValue().getLast());
+			
 			// ajout des arcs, donc parcours des voisins 
-			for (String neighborId : entry.getValue().getLeft()){
+			for (String neighborId : entry.getValue().getFirst()){
 				// si l'arc existe deja, ne rien faire
 				if ( finalGraph.getEdge(n.getId()+neighborId)== null && finalGraph.getEdge(neighborId+n.getId())==null){
 					finalGraph.addNode(neighborId);
@@ -68,86 +122,400 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 		return finalGraph ;
 	}
 	
-	// fonction permettant de concatener 2 graphes, et donc de mettre ï¿½ jour ses informations
-	public void graphsFusion(Graph graphReceived){
-		for (Node n : graphReceived){
+	/**TODO: Verifier POURQUOI POURQUOI A-T-ON DES de states null?
+	 * fonction permettant de concatener 2 graphes, et donc de mettre ï¿½ jour ses informations 
+	 * @param receivedGraph
+	 */
+	public void graphsFusion(Graph receivedGraph){
+		ArrayList<String> opened = ((CleverAgent) super.myAgent).getOpened();
+		for (Node n : receivedGraph){
 			Node old_node = myGraph.getNode(n.getId());
 			// si on ignorait l'existence de ce noeud, on l'ajoute ï¿½ notre graphe ainsi que ses attributs
 			if (old_node == null){
 				Node new_node = myGraph.addNode(n.getId());
-				new_node.addAttribute("state", n.getAttribute("state"));
-				new_node.addAttribute("content", n.getAttribute("content"));
+				new_node.addAttribute("state", (String)n.getAttribute("state"));
+				//on rajoute les noeuds ouverts de l'autre agent
+				if( n.getAttribute("state")==null || ((String)n.getAttribute("state")).equals("opened"))
+					opened.add(new_node.getId());
+				
+				new_node.addAttribute("content", (n.getAttribute("content")==null)? new ArrayList<Attribute>(): n.getAttribute("content"));
+				new_node.addAttribute("haveBeenThere",(n.getAttribute("haveBeenThere")==null)? new ArrayList<AID>(): n.getAttribute("haveBeenThere") );
 				
 			} else { // si le noeud existait, on compare les attributs
 				//si ce noeud a ete explore, on le marque closed (ne change rien s'il l'ï¿½tait deja)
-				if (n.getAttribute("state").equals("closed"))
+				if (n.getAttribute("state")==null || n.getAttribute("state").equals("closed")){
 					old_node.setAttribute("state", "closed");
+					opened.remove(old_node.getId());
+				}
+				
+				List<AID>lOld_node = ( ((List<AID>)old_node.getAttribute("haveBeenThere"))==null)?new ArrayList<AID>():((List<AID>)old_node.getAttribute("haveBeenThere"));
+				List<AID>lnew_node = ( ((List<AID>)n.getAttribute("haveBeenThere"))==null)?new ArrayList<AID>():((List<AID>)n.getAttribute("haveBeenThere"));
 
+				for (AID a : lnew_node){
+					if ( lOld_node.indexOf(a) == -1 )
+						lOld_node.add(a);
+				}
+				old_node.setAttribute("haveBeenThere", lOld_node );
+				
 				List<Attribute> obs = n.getAttribute("content");
 				List<Attribute> old_obs = old_node.getAttribute("content");
 				
 				// si il y avait un trï¿½sor, on garde la plus petite quantitï¿½ restante de ce trï¿½sor
 				//on regarde les possibles attributs pour ce noeud dans les nouvelles observations 
-				for(Attribute a : obs){
-					if(a.getName().equals("Treasure")){
-						int i = old_obs.indexOf("Treasure");
-						if(i == -1){
-							old_node.setAttribute("content", obs);
-						}
-						else{
-							int oldTreasureValue = (int) old_obs.get(i).getValue();
-							if((int)a.getValue() < oldTreasureValue ){
-								old_obs.get(i).setValue(a.getValue());
-							}
-						}
+				if(obs != null){
+					for(Attribute a : obs){
+						if(a.getName().equals("Treasure")){
+							int i =-1;
+							if (old_obs!= null)
+								i = old_obs.indexOf("Treasure");
+							if(i == -1){
+								old_node.setAttribute("content", obs);
 
-					}
+							}
+							else{
+								int oldTreasureValue = (int) old_obs.get(i).getValue();
+								if((int)a.getValue() < oldTreasureValue ){
+									old_obs.get(i).setValue(a.getValue());
+								}
+							}	
+						}
 						
+						if(a.getName().equals("Diamonds")){
+							int i =-1;
+							if (old_obs!= null)
+								i = old_obs.indexOf("Diamonds");
+							if(i == -1){
+								old_node.setAttribute("content", obs);
+
+							}
+							else{
+								int oldDiamondsValue = (int) old_obs.get(i).getValue();
+								if((int)a.getValue() < oldDiamondsValue ){
+									old_obs.get(i).setValue(a.getValue());
+								}
+							}	
+						}
+							
+					}
 				}
 			}
-			
-			// on parcourt tous les arcs du graphReceived
-			for(Edge e : graphReceived.getEachEdge()){
-				String id0 = e.getNode0().getId();
-				String id1 = e.getNode1().getId();
-				//si l'arc n'existe pas, on l'ajoute 
-				if(myGraph.getEdge(id0+id1) == null && myGraph.getEdge(id1+id0) == null)
-					myGraph.addEdge(id0+id1, id0, id1);
-			}
 		}
+		((CleverAgent) super.myAgent).setOpened(opened);
+		
+		// on parcourt tous les arcs du receivedGraph
+		for(Edge e : receivedGraph.getEachEdge()){
+			String id0 = e.getNode0().getId();
+			String id1 = e.getNode1().getId();
+			//si l'arc n'existe pas, on l'ajoute 
+			if(myGraph.getEdge(id0+id1) == null && myGraph.getEdge(id1+id0) == null)
+				myGraph.addEdge(id0+id1, id0, id1);
+		}
+		
 	}
 	
 	@Override
 	public void action() {
-		switch(state){
-		case 0:
-			// say hi
-			//envoie un message "hello ?"
-			//state ++
-		case 1:
-			// regardes sa boite aux lettres et attends un message de rÃ©ponse (timeout)
-			//timeout done --> finished = true
-			// state ++
-		case 2:
-			//convertir le graph en map spÃ©cifique a chaque agent qui a rÃ©pondu
-			// et on le leur envoie
-			//state++
-		case 3:
-			// on attend les graph des autres
-			// on convertit les maps reÃ§ues en graphe
-			// et on fusionne chaque graph avec le notre 
-			// state ++ 
-			
-		default:
-			finished = true;
-		}
 		
+		exit_value=0;
+		state = ((CleverAgent) super.myAgent).getCommunicationState();
+		System.out.println("Agent "+this.myAgent.getLocalName()+" state: "+state);
+		
+		switch(state){
+			case 0:
+				//si on a des vieux maps on les efface
+				ACLMessage mapMessage;
+				do{
+					mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+				}while(mapMessage!=null);
+				
+				//agent gives its first position and its current capacity	
+				String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+				ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+				msg.setSender(this.myAgent.getAID());
+				
+				if (myPosition!=""){
+					System.out.println("Agent "+this.myAgent.getLocalName()+ " is trying to reach its friends");
+					msg.setContent(((CleverAgent)this.myAgent).getFirstPosition()+":"+((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
+	
+					//on ajoute tous les agents a la liste des destinataires (evite les doublons)					
+					Set<AID> cles = ((CleverAgent)this.myAgent).getAgentList().keySet();		
+					for (AID aid : cles){
+						if(receivers.indexOf(aid)==-1)
+							msg.addReceiver(aid);
+					}
+					((mas.abstractAgent)this.myAgent).sendMessage(msg);
+				}
+				((CleverAgent) super.myAgent).setCommunicationState(state+1);
+				break ;
+						
+
+					//si un agent n'etait pas dans le rayon de communication lors de l'envoi du message case 0 
+					//et qu'il arrive en periode de communication, il sera notifie des agents qui ont recu le request avec un OK 
+					
+			case 1 :
+					// regarde sa boite aux lettres et attend un message de rÃ©ponse (timeout)	
+					final MessageTemplate msgTemplate = MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REQUEST), MessageTemplate.MatchPerformative(ACLMessage.AGREE));	
+					final ACLMessage answer = this.myAgent.receive(msgTemplate);
+				
+					//TODO rafraichir la liste ? la supprimer de temps en temps ?
+					/*
+					 * on regarde la sous liste constituï¿½e des 25% premiers agents rï¿½cemment contactï¿½s
+					 * si le gars en fait partie, on ne le contactera pas
+					 */
+					//int mostRecent = ((CleverAgent) super.myAgent).getLastCom().size()/4 ;
+					
+					if (answer  != null) {
+						System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
+						AID sender = answer.getSender();
+						String content = answer.getContent();
+//						if(receivers.indexOf(answer.getSender())==-1 && !((CleverAgent) super.myAgent).getLastCom().subList(0, mostRecent).contains(answer.getSender()) ){
+						if(receivers.indexOf(sender)==-1){
+							
+							//envoi un message OK
+							receivers.add(sender);
+							ACLMessage okMsg = new ACLMessage(ACLMessage.REQUEST);
+							okMsg.setContent("ok"); okMsg.setSender(this.myAgent.getAID());
+							okMsg.addReceiver(sender);
+							((mas.abstractAgent)this.myAgent).sendMessage(okMsg);
+												
+							HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)this.myAgent).getAgentList();
+							//si je n'ai pas sa position initiale (et sa capacite)
+							if( agentList.get(sender).get(0) == "" && !content.equals("ok")){
+								String[] tokens = content.split("[:]");
+								ArrayList<String> infos = new ArrayList<String>(Arrays.asList(tokens[0],tokens[1],""));
+								agentList.replace(sender, infos);
+								((CleverAgent)this.myAgent).setAgentList(agentList);
+								System.err.println(this.myAgent.getLocalName()+" a initialise pos: "+tokens[0]+" et cap: "+tokens[1]+" de "+sender.getLocalName());
+							}
+							
+						}
+						System.out.println(receivers.toString());
+					}
+					// si limite de rï¿½ponses attendues atteint 
+					if(receivers.size() >= ((CleverAgent)super.myAgent).getAgentList().size()){
+						((CleverAgent) super.myAgent).setCommunicationState(3);
+						cptWait=0;
+					}
+					// si temps d'attente atteint
+					else if(cptWait >= nbWaitAnswer){
+						if(receivers.isEmpty()){
+							cptWait=0;
+							((CleverAgent) super.myAgent).setCommunicationState(5);
+						}
+						else{
+							((CleverAgent) super.myAgent).setCommunicationState(3);
+							cptWait = 0;
+						}
+						
+						//on envoit des CANCEL a tout ceux qui n'ont pas rÃ©pondu dans les temps
+						final ACLMessage finalComm = new ACLMessage(ACLMessage.CANCEL);
+						finalComm.setContent("end communication");
+						finalComm.setSender(this.myAgent.getAID());
+						
+						Set<AID> cles = ((CleverAgent)this.myAgent).getAgentList().keySet();		
+						for (AID aid : cles){
+							if(!receivers.contains(aid))
+								finalComm.addReceiver(aid);
+						}
+						
+						((mas.abstractAgent)this.myAgent).sendMessage(finalComm);
+						System.out.println(myAgent.getLocalName()+" annule");
+						
+						
+					}
+					else{
+						System.out.println(this.myAgent.getLocalName()+" attend un signe");
+						block(1500);
+						cptWait++;
+					}
+				
+				break;
+				
+			case 2:
+				// Agent 1 essaye de communiquer 1...5 fois
+				//ï¿½ la 5eme Agent 2 passe dans les environs et intercepte le message
+				//Agent 2 s'interrompt et passe en state 2
+				// mais Agent1 est reparti et s'est trop ï¿½loignï¿½ -> ne reï¿½oit pas le message 
+				// Agent 2 passe en 3 et 4 et reste coincï¿½
+				//********************
+				//SOLUTION ?
+				// au dernier tour de communication, Agent peut envoyer un message "end"
+				// dans le case 3 ou 4 si on reï¿½oit un message "end" de notre contact
+				// on supprime ce contact de la liste de recevers
+				
+				//si on a des vieux maps on les efface
+
+				do{
+					mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+				}while(mapMessage!=null);
+				
+				receivers = ((CleverAgent) this.myAgent).getAgentsNearby();
+				((CleverAgent) this.myAgent).setAgentsNearby(new ArrayList<AID>());
+				
+				//agent gives its first position and its current capacity	
+				String myPos=((mas.abstractAgent)this.myAgent).getCurrentPosition();
+				ACLMessage msge = new ACLMessage(ACLMessage.AGREE);
+				msge.setSender(this.myAgent.getAID());
+				
+				if (myPos!=""){
+					msge.setContent(((CleverAgent)this.myAgent).getFirstPosition()+":"+((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
+	
+					//on ajoute les agents qui ont envoyÃ© de message 
+					for(AID id: receivers){
+						msge.addReceiver(id);				
+					}
+					System.out.println("Agent "+this.myAgent.getLocalName()+ " in state 2 is trying to reach "+receivers.toString());
+					((mas.abstractAgent)this.myAgent).sendMessage(msge);
+					
+					ACLMessage cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					while(cancelMsg !=null){
+						System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancelMsg.getSender().getLocalName());
+						receivers.remove(cancelMsg.getSender());
+						cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					}
+					
+					((CleverAgent) super.myAgent).setCommunicationState(state+1);;
+				}
+				break;
+				
+			case 3:
+				//convertir le graph en map spÃ©cifique a chaque agent qui a rÃ©pondu et l'envoyer
+				
+				//si on a reï¿½u message d'annulation
+				ACLMessage cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+				while(cancelMsg !=null){
+					System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancelMsg.getSender().getLocalName());
+					receivers.remove(cancelMsg.getSender());
+					cancelMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));			
+				}
+				//TODO
+				if( ((CleverAgent)this.myAgent).isInterblocage()==true){
+					receivers = ((CleverAgent)this.myAgent).getAgentsNearby();
+					((CleverAgent)this.myAgent).setAgentsNearby(new ArrayList<AID>());
+				}
+				
+				for(AID c : receivers){
+					ACLMessage mapMsg = new ACLMessage(ACLMessage.INFORM);
+					mapMsg.setSender(this.myAgent.getAID());
+					mapMsg.addReceiver(c);
+					HashMap<String,Data<List<String>,String, List<Attribute>, List<AID>>> mapToSend = graphToHashmap(myGraph, c);
+					
+					System.out.println("Agent "+this.myAgent.getLocalName()+" sends a map to "+c.getLocalName());
+					
+					try {
+						mapMsg.setContentObject(mapToSend);
+					} catch (IOException e) {
+						System.out.println("could not create the message with mapToSend");
+						e.printStackTrace();
+					}
+					((mas.abstractAgent)this.myAgent).sendMessage(mapMsg);
+					
+				}
+				((CleverAgent) super.myAgent).setCommunicationState(state+1);;
+				break;
+				
+			case 4: 
+				// on attend les graph des autres
+				// on convertit les maps reÃ§ues en graphe
+				// et on fusionne chaque graph avec le notre
+				//TODO mise en place d'un timeout
+				// attendre toutes les maps des agents contactï¿½s
+				while(msgs.size()< receivers.size() && cptWait < nbWaitAnswer*7){
+//				while(msgs.size()< receivers.size()){
+					ACLMessage tmp = (myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM)));
+					if (tmp!=null)
+						msgs.add(tmp);
+//					System.out.println(myAgent.getLocalName()+" NB_MSG = "+msgs.size()+"  RECEVERS "+receivers.size()+"  "+receivers.toString());
+					block(1000);
+					//System.out.println("nb msg recu:"+msgs.size()+ "  nb msg attendus : "+receivers.size() );
+					cptWait++;
+					//si on reï¿½oit message d'annulation
+					ACLMessage cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+
+					while(cancel !=null){
+						System.out.println(myAgent.getLocalName()+" a recu un message d'annulation de "+cancel.getSender().getLocalName());
+						receivers.remove(cancel.getSender());
+						cancel = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+					}
+				}
+				//pour chaque map reï¿½ue
+				for(ACLMessage receivedMap : msgs){		
+					
+					if (receivedMap != null) {
+						System.out.println(this.myAgent.getLocalName()+"<----Received a map from "+receivedMap.getSender().getLocalName());
+						try {
+							HashMap<String, Data<List<String>, String, List<Attribute>, List<AID>>> hmap;		
+							hmap = ((HashMap<String, Data<List<String>, String, List<Attribute>, List<AID>>>) receivedMap.getContentObject());
+							
+							Graph receivedGraph = hashmapToGraph(hmap);
+							graphsFusion(receivedGraph);
+							/*TODO:
+							 * pour chaque message reï¿½u, on a donc communiquï¿½ avec l'expï¿½diteur
+							 * on l'ajoute donc en tete de notre liste de comm
+							 */
+//							ArrayList<AID> comm=((CleverAgent) super.myAgent).getLastCom();
+//							int index = comm.indexOf(receivedMap.getSender());
+//							if(index==-1){
+//								comm.add(0, receivedMap.getSender());			
+//							} else {
+//								comm.remove(index);
+//								comm.add(0, receivedMap.getSender());
+//							}
+//							((CleverAgent) super.myAgent).setLastCom(comm);
+							receivers.remove(receivedMap.getSender());
+							refreshAgent();
+						} catch (UnreadableException e) {
+							e.printStackTrace();
+						}
+						
+					}		
+				}
+	
+				msgs.clear();
+				receivers.clear();
+//				if( cptWait >= nbWaitAnswer*2 && ((CleverAgent)this.myAgent).isInterblocage()){
+//					((CleverAgent)this.myAgent).setInterblocageState(6);
+//					((CleverAgent)this.myAgent).setInterblocage(false);
+//					exit_value = 1;
+//				}
+				cptWait=0;
+				//TODO
+				if(((CleverAgent)this.myAgent).isInterblocage())
+					exit_value=1;
+				((CleverAgent) super.myAgent).setCommunicationState(state+1);
+				break;
+				
+			default: 
+				break;
+		}		
+	}
+	
+	public void refreshAgent(){
+		((CleverAgent) super.myAgent).setGraph(myGraph);
 	}
 
 	@Override
+	public int onEnd() {
+		ACLMessage mapMessage;
+		do{
+			mapMessage = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+		}while(mapMessage!=null);
+		
+		do{
+			mapMessage = this.myAgent.receive(MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REQUEST), MessageTemplate.MatchPerformative(ACLMessage.AGREE)));
+		}while(mapMessage!=null);
+		
+		return exit_value;
+	}
+	
+	@Override
 	public boolean done() {
-
-		return finished;
+		if(((CleverAgent) super.myAgent).getCommunicationState() == 5){
+			cptWait = 0;
+			receivers.clear();
+			return true;
+		}
+		return false;
 	}
 
 }

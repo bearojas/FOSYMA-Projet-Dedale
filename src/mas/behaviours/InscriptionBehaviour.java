@@ -1,18 +1,16 @@
 package mas.behaviours;
 
-import java.util.ArrayList;
-
-import jade.core.AID;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
+import mas.agents.CleverAgent;
 
 public class InscriptionBehaviour extends OneShotBehaviour{
 	
 	/**
-	 * 
+	 * An agent registers its service (explore) with the DF
 	 */
 	private static final long serialVersionUID = 1L;
 	
@@ -29,10 +27,11 @@ public class InscriptionBehaviour extends OneShotBehaviour{
 		sd.setName(super.myAgent.getLocalName() );
 		dfd.addServices(sd);
 		try {
-		DFService.register(super.myAgent, dfd );
+			DFService.register(super.myAgent, dfd );
 		} catch (FIPAException fe) { fe.printStackTrace(); }
 		
-		//System.out.println("AID:"+super.myAgent.getAID());
+		//initialisation de la position initiale et la capacite
+		((CleverAgent) super.myAgent).setFirstPosition(((CleverAgent) super.myAgent).getCurrentPosition());
 		
 	}
 
