@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.graphstream.algorithm.Dijkstra;
@@ -30,6 +31,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 	private static final long serialVersionUID = 2139427080509307681L;
 	private int state = 0;
 	private int exitValue = 0;
+	private boolean moved = false;
 	private List<Node> path;
 	
 	public GetBackHomeBehaviour(mas.abstractAgent myagent) {
@@ -77,6 +79,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					System.out.println("je cherche un nouveau chemin pour rentrer chez moi");
 					Graph tmpGraph = ((CleverAgent)this.myAgent).getGraph();
 					String destination = ((CleverAgent)this.myAgent).getFirstPosition();
+					List<Node> newpath = new ArrayList<Node>();
 					if(!destination.equals(path.get(0).getId())){
 						tmpGraph.removeNode(path.get(0));			
 						Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.NODE, null, null);
@@ -84,16 +87,32 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 						dijkstra.setSource(tmpGraph.getNode(myPos));
 						dijkstra.compute();
 
-						path = dijkstra.getPath(tmpGraph.getNode(destination)).getNodePath();						
+						newpath = dijkstra.getPath(tmpGraph.getNode(destination)).getNodePath();
+						if(!newpath.isEmpty()){
+							path = newpath;
+							((CleverAgent) super.myAgent).setChemin(path);
+						}
+							
 					}
-					
-					if(path.isEmpty()){
+					//interblocage
+					if(newpath.isEmpty() || destination.equals(path.get(0).getId())){
 						System.out.println("interblocage");
-						//TODO: cas interblocage
+						((CleverAgent)this.myAgent).setInterblocage(true);	
+						((CleverAgent)this.myAgent).setInterblocageState(0);
+						String myPosition = ((abstractAgent)this.myAgent).getCurrentPosition();
+						System.out.println("INTERBLOCAGE pour agent "+myAgent.getName());
+						final ACLMessage mess = new ACLMessage(ACLMessage.FAILURE);
+						mess.setSender(this.myAgent.getAID()); mess.setContent(path.get(0).getId()+"_"+myPosition); //le noeud qui nous bloque_o� on est
+						
+						Set<AID> cles = ((CleverAgent)this.myAgent).getAgentList().keySet();		
+						for (AID aid : cles){
+							mess.addReceiver(aid);
+						}
+						((mas.abstractAgent)this.myAgent).sendMessage(mess);
+						((CleverAgent)this.myAgent).setAgentsNearby(new ArrayList<AID>());
+						exitValue = 1;
 					}
-					else{
-						((CleverAgent) super.myAgent).setChemin(path);
-					}
+
 				}
 				break;
 				
@@ -128,9 +147,11 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				break;
 			
 			case 3: //on attend la fin de l'exploration des autres
-				final ACLMessage block = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.FAILURE));		
+				final ACLMessage block = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.PROPOSE));		
 				if(block!=null){
-					exitValue = 1;
+					//si il recoit un message d'interblocage de quelqu'un qui explore
+					moved = true;
+					//exitValue = 1;
 					//TODO: deadlock
 				}		
 				//interroger les pages jaunes pour voir s'il reste des agents en Exploration
@@ -201,7 +222,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				}
 				break;
 			case 4:				
-				// chercher parmi les autres agents la plus grande capacite
+				// chercher parmis les autres agents la plus grande capacite
 				int capacite;
 				int cap_max = 0;
 				HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)this.myAgent).getAgentList();
@@ -251,7 +272,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				
 			case 5:
 				//attente: on regarde la boite aux lettres (messages d'interblocages et de missions) et les pages jaunes
-				final ACLMessage task = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.PROPOSE));				
+				final ACLMessage task = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.REQUEST));				
 				final ACLMessage blockMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.FAILURE));		
 				
 				if(task!=null){
@@ -278,7 +299,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 	}
 
 	public boolean done() {
-		return state == 6;
+		return state == 6 || exitValue == 1;
 	}
 
 }
