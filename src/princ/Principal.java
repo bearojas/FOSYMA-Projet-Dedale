@@ -34,12 +34,12 @@ public class Principal {
 
 	private static Environment env;// static ref of the real environment
 	
-	private static final int NBAGENTS = 2 ;
+	private static final int NBAGENTS = 3 ;
 
 	public static void main(String[] args){
 
 		//0) Create the real environment and the observed one
-		env= new Environment(ENVtype.GRID_T,10,null);
+		env= new Environment(ENVtype.GRID_T,5,null);
 		//env= new Environment(ENVtype.DOROGOVTSEV_T,15,null);
 		//env=new Environment("ressources/map2015","ressources/map2015-config");
 		

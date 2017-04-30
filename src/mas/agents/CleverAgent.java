@@ -10,8 +10,9 @@ import org.graphstream.graph.implementations.SingleGraph;
 
 import env.Environment;
 import jade.core.AID;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
 import mas.abstractAgent;
-import mas.behaviours.CollectBehaviour;
 import mas.behaviours.GetAgentBehaviour;
 import mas.behaviours.InscriptionBehaviour;
 import mas.behaviours.MainBehaviour;
@@ -229,6 +230,14 @@ public class CleverAgent extends abstractAgent{
 		this.treasureToFind = treasureToFind;
 	}
 
-
-
+	protected void takenDown(){
+		// Deregister from the yellow pages
+		try	{
+			DFService.deregister(this);
+		}
+		catch(FIPAException fe) {
+			fe.printStackTrace();
+		}
+		System.out.println(this.getLocalName()+" terminating");
+	}
 }

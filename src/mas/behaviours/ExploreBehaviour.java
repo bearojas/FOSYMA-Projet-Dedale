@@ -6,6 +6,7 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -278,10 +279,10 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				String content = msg.getContent();
 				HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)this.myAgent).getAgentList();
 				//si je n'ai pas sa position initiale (et sa capacite)
-				if( agentList.get(sender.get(0)).get(0) == "" && !content.equals("ok")){
+				if( agentList.get(sender.get(0)).get(0) == ""){
 					String[] tokens = content.split("[:]");
-					agentList.get(sender.get(0)).set(0, tokens[0]); //position
-					agentList.get(sender.get(0)).set(1, tokens[1]); //capacite
+					ArrayList<String> infos = new ArrayList<String>(Arrays.asList(tokens[0],tokens[1],""));
+					agentList.replace(sender.get(0), infos);
 					((CleverAgent)this.myAgent).setAgentList(agentList);
 					System.err.println(this.myAgent.getLocalName()+" a initialise pos: "+tokens[0]+" et cap: "+tokens[1]+" de "+sender.get(0).getLocalName());
 				}

@@ -2,6 +2,7 @@ package mas.behaviours;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
@@ -240,7 +241,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					Set<AID> cles = ((CleverAgent)this.myAgent).getAgentList().keySet();		
 					for (AID aid : cles){
 						if(receivers.indexOf(aid)==-1)
-						msg.addReceiver(aid);
+							msg.addReceiver(aid);
 					}
 					((mas.abstractAgent)this.myAgent).sendMessage(msg);
 				}
@@ -262,6 +263,7 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 					 * si le gars en fait partie, on ne le contactera pas
 					 */
 					//int mostRecent = ((CleverAgent) super.myAgent).getLastCom().size()/4 ;
+					
 					if (answer  != null) {
 						System.out.println(this.myAgent.getLocalName()+"<----Result received from "+answer.getSender().getLocalName()+" ,content= "+answer.getContent());
 						AID sender = answer.getSender();
@@ -280,8 +282,8 @@ public class ExchangeMapBehaviour extends SimpleBehaviour {
 							//si je n'ai pas sa position initiale (et sa capacite)
 							if( agentList.get(sender).get(0) == "" && !content.equals("ok")){
 								String[] tokens = content.split("[:]");
-								agentList.get(sender).set(0, tokens[0]); //position
-								agentList.get(sender).set(1, tokens[1]); //capacite
+								ArrayList<String> infos = new ArrayList<String>(Arrays.asList(tokens[0],tokens[1],""));
+								agentList.replace(sender, infos);
 								((CleverAgent)this.myAgent).setAgentList(agentList);
 								System.err.println(this.myAgent.getLocalName()+" a initialise pos: "+tokens[0]+" et cap: "+tokens[1]+" de "+sender.getLocalName());
 							}

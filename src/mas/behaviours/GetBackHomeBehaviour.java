@@ -2,6 +2,7 @@ package mas.behaviours;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -43,6 +44,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 		
 		String myPos = ((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		state = ((CleverAgent) super.myAgent).getComingbackState();
+		exitValue = 0;
 		
 		switch(state){
 			//chercher un chemin au noeud initial
@@ -64,8 +66,11 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				//si le prochain noeud du chemin a ete atteint
 				if(!path.isEmpty() && myPos.equals(path.get(0).getId())){
 					path.remove(0);
-					if(!path.isEmpty())
+					if(!path.isEmpty()){
+						System.out.println(myAgent.getLocalName().toString()+" va en "+path.get(0).getId());
 						((mas.abstractAgent)this.myAgent).moveTo(path.get(0).getId());
+					}
+						
 				}
 				//si le noeud initial a ete atteint
 				else if(path.isEmpty()){
@@ -90,14 +95,15 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				ServiceDescription capacity = new ServiceDescription();
 				ServiceDescription pos_init = new ServiceDescription();
 				sd.setType( "collect" ); 
-				sd.setName(super.myAgent.getLocalName() );
-				capacity.setType( "capacity" ); 
-				capacity.setName(((CleverAgent)myAgent).getBackPackFreeSpace()+"" );
-				pos_init.setType( "home" ); 
-				pos_init.setName(((CleverAgent)myAgent).getFirstPosition() );
+				sd.setName(super.myAgent.getLocalName());
+				capacity.setType( "capacity:"+((CleverAgent)myAgent).getBackPackFreeSpace() ); 
+				capacity.setName(super.myAgent.getLocalName());
+				pos_init.setType("home:"+((CleverAgent)myAgent).getFirstPosition()); 
+				pos_init.setName(super.myAgent.getLocalName() );
 				dfd.addServices(sd);
 				dfd.addServices(capacity);
 				dfd.addServices(pos_init);
+				System.out.println(myAgent.getLocalName()+"enregistre pos: "+((CleverAgent)myAgent).getFirstPosition() +" et cap: "+((CleverAgent)myAgent).getBackPackFreeSpace());
 				try {
 					DFService.register(super.myAgent, dfd );
 				} catch (FIPAException fe) { fe.printStackTrace(); }
@@ -121,24 +127,44 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					//si tout le monde a finit l'exploration
 					if(result.length == 0){
 						System.out.println("Tout le monde a fini !");
+						boolean MaJ = true;
 						//s'assurer que les infos sur les agents sont completes
 						HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)this.myAgent).getAgentList();
 						for(AID key : agentList.keySet()){
 							ArrayList<String> infos = agentList.get(key);
 							if(infos.isEmpty() || infos.get(0).equals("")){
 								//s'il manque des infos, consulter DF
-								System.out.println("il manque des infos sur "+key.getLocalName().toString());
-								descrip = new DFAgentDescription();
-								descrip.setName(key);
+								DFAgentDescription template = new DFAgentDescription();
+								ServiceDescription sv = new ServiceDescription();
+								sv.setType("collect");
+								template.addServices(sv);
 								try{
-									result = DFService.search(super.myAgent, descrip);
-									while(result[0].getAllServices().hasNext()){
-										ServiceDescription s =(ServiceDescription) result[0].getAllServices().next();
-										if(s.getType().equals("home"))
-											infos.set(0, s.getName());
-										if(s.getType().equals("capacity"))
-											infos.set(1, s.getName());
+									result = DFService.search(super.myAgent, template);
+									for(int i=0; i<result.length; i++){
+										DFAgentDescription df = result[i];
+										AID provider = df.getName();
+										if(provider.equals(key)){
+											Iterator it = df.getAllServices();
+											while(it.hasNext()){
+												ServiceDescription s =(ServiceDescription) it.next();
+												if(s.getType().contains("home")){
+													String posinit = s.getType();
+													String[] tokens = posinit.split("[:]");
+													infos.set(0, tokens[1]);													
+												}
+												if(s.getType().contains("capacity")){
+													String cap = s.getType();
+													String[] tokens = cap.split("[:]");
+													infos.set(1, tokens[1]);												
+												}
+											}
+										}
+										
 									}
+									
+									//si toujours pas trouve
+									if(infos.get(0).equals(""))
+										MaJ = false;
 								} catch (Exception e) {
 									e.printStackTrace();
 								}
@@ -146,52 +172,8 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 							}
 						}
 						((CleverAgent)myAgent).setAgentList(agentList);
-						
-						// chercher parmi les autres agents la plus grande capacite
-						int capacite;
-						int cap_max = 0;
-						agentList = ((CleverAgent)this.myAgent).getAgentList();
-						System.out.println("Pour "+myAgent.getLocalName().toString()+" "+agentList.toString());
-						for(Entry<AID, ArrayList<String>> entry : agentList.entrySet()){
-							capacite = Integer.parseInt(entry.getValue().get(1));
-							if( cap_max < capacite){
-								cap_max = capacite;
-							}
-						}
-						System.out.println("La plus grande capacité chez les autres : "+cap_max);
-						if(((abstractAgent)this.myAgent).getBackPackFreeSpace() < cap_max){
-							System.out.println(myAgent.getLocalName().toString()+" I'm not the best");
-							//l'agent n'a pas la capacite max
-							((CleverAgent) super.myAgent).setComingbackState(state+1);								
-						}
-						else if(((abstractAgent)this.myAgent).getBackPackFreeSpace() == cap_max){
-							//TODO: que faire en cas d'egalite? ordre alphabetique?
-							//chercher les autres agents qui ont la meme capacite que moi
-							boolean max= true;
-							for (AID k : agentList.keySet()){
-								ArrayList<String> other = agentList.get(k);
-								if(Integer.parseInt(other.get(1)) == cap_max){
-									//si un autre agent a aussi la capacite max,mais est avant moi dans ordre alphabetique je n'y vais pas
-									if(myAgent.getLocalName().compareTo(k.getLocalName())< 0){
-										max = false;
-										((CleverAgent) super.myAgent).setComingbackState(state+1);
-										break;
-									}
-										
-								}
-							}
-							if(max == true){
-								System.out.println(myAgent.getLocalName().toString()+" FIRST");
-								//l'agent est premier dans ordre alphabetique
-								((CleverAgent) super.myAgent).setComingbackState(5);
-								exitValue = 2;
-							} 
-						}
-						else{
-							//l'agent a la meilleure capacite
-							System.out.println(myAgent.getLocalName().toString()+" i'm the best");
-							((CleverAgent) super.myAgent).setComingbackState(5);
-							exitValue = 2;
+						if(MaJ){
+							((CleverAgent) super.myAgent).setComingbackState(state+1);
 						}
 				
 					}		
@@ -202,7 +184,57 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					e.printStackTrace();
 				}
 				break;
-			case 4:
+			case 4:				
+				// chercher parmi les autres agents la plus grande capacite
+				int capacite;
+				int cap_max = 0;
+				HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)this.myAgent).getAgentList();
+				System.out.println("Pour "+myAgent.getLocalName().toString()+" "+agentList.toString());
+				for(Entry<AID, ArrayList<String>> entry : agentList.entrySet()){
+					capacite = Integer.parseInt(entry.getValue().get(1));
+					if( cap_max < capacite){
+						cap_max = capacite;
+					}
+				}
+				System.out.println("La plus grande capacité chez les autres : "+cap_max);
+				if(((abstractAgent)this.myAgent).getBackPackFreeSpace() < cap_max){
+					System.out.println(myAgent.getLocalName().toString()+" I'm not the best");
+					//l'agent n'a pas la capacite max
+					((CleverAgent) super.myAgent).setComingbackState(state+1);								
+				}
+				else if(((abstractAgent)this.myAgent).getBackPackFreeSpace() == cap_max){
+					//TODO: que faire en cas d'egalite? ordre alphabetique?
+					//chercher les autres agents qui ont la meme capacite que moi
+					boolean max= true;
+					for (AID k : agentList.keySet()){
+						ArrayList<String> other = agentList.get(k);
+						if(Integer.parseInt(other.get(1)) == cap_max){
+							//si un autre agent a aussi la capacite max,mais est avant moi dans ordre alphabetique je n'y vais pas
+							if(myAgent.getLocalName().compareTo(k.getLocalName())< 0){
+								max = false;
+								((CleverAgent) super.myAgent).setComingbackState(state+1);
+								break;
+							}
+								
+						}
+					}
+					if(max == true){
+						System.out.println(myAgent.getLocalName().toString()+" FIRST");
+						//l'agent est premier dans ordre alphabetique
+						((CleverAgent) super.myAgent).setComingbackState(6);
+						exitValue = 2;
+					} 
+				}
+				else{
+					//l'agent a la meilleure capacite
+					System.out.println(myAgent.getLocalName().toString()+" i'm the best");
+					((CleverAgent) super.myAgent).setComingbackState(6);
+					exitValue = 2;
+				}
+			
+				
+				
+			case 5:
 				//attente: on regarde la boite aux lettres (messages d'interblocages et de missions) et les pages jaunes
 				final ACLMessage task = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.PROPOSE));				
 				final ACLMessage blockMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.FAILURE));		
