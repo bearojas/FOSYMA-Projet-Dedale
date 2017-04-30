@@ -18,6 +18,7 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import jade.lang.acl.UnreadableException;
 import mas.abstractAgent;
 import mas.agents.CleverAgent;
 
@@ -70,7 +71,11 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				}
 				//si le noeud initial a ete atteint
 				else if(path.isEmpty()){
-					((CleverAgent) super.myAgent).setComingbackState(state+1);
+					//si c'est la premiere fois qu'on est dans ce behaviour
+					if(((CleverAgent)myAgent).getType().equals(""))
+						((CleverAgent) super.myAgent).setComingbackState(state+1);
+					else //sinon
+						((CleverAgent) super.myAgent).setComingbackState(5);
 				}	
 				else{
 					//d'abord on cherche un autre chemin 
@@ -237,6 +242,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 						System.out.println(myAgent.getLocalName().toString()+" FIRST");
 						//l'agent est premier dans ordre alphabetique
 						((CleverAgent) super.myAgent).setComingbackState(6);
+						((CleverAgent) super.myAgent).setPickingState(0);
 						exitValue = 2;
 					} 
 				}
@@ -244,6 +250,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					//l'agent a la meilleure capacite
 					System.out.println(myAgent.getLocalName().toString()+" i'm the best");
 					((CleverAgent) super.myAgent).setComingbackState(6);
+					((CleverAgent) super.myAgent).setPickingState(0);
 					exitValue = 2;
 				}
 				break;
@@ -251,12 +258,30 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				
 			case 5:
 				//attente: on regarde la boite aux lettres (messages d'interblocages et de missions) et les pages jaunes
-				final ACLMessage task = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.PROPOSE));				
+				final ACLMessage task = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL));				
 				final ACLMessage blockMsg = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.FAILURE));		
 				
 				if(task!=null){
-					//TODO: un agent nous contacte pour nous donner une tache a effectuer
-					//dois nous envoyer agentList a jour et liste des tresors 
+					// un agent nous contacte pour nous donner une tache a effectuer
+					//dois nous envoyer agentList a jour et liste des tresors
+					System.out.println(myAgent.getLocalName().toString()+" a reçu un message de "+task.getSender().getLocalName().toString());
+					try {
+						HashMap<AID, ArrayList<String>> newAgentList = (HashMap<AID, ArrayList<String>>) task.getContentObject();
+						
+						((CleverAgent)myAgent).setAgentList(newAgentList);
+						
+						ACLMessage info = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CFP));
+						while(info==null){
+							 info = this.myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CFP));
+						}
+						System.out.println(myAgent.getLocalName().toString()+" a reçu le trésor a chercher");
+						((CleverAgent)myAgent).setTreasureToFind(info.getContent());
+						
+						((CleverAgent)myAgent).setPickingState(0);
+						((CleverAgent)myAgent).setComingbackState(6);
+						exitValue = 2;
+						
+					} catch (UnreadableException e) {e.printStackTrace();}
 				}
 				
 				if(blockMsg!=null){

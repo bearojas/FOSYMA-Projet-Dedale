@@ -39,6 +39,7 @@ public class CleverAgent extends abstractAgent{
 	private String firstPosition;
 	private String type ="";
 	private String treasureToFind="";
+	private AID agentToReach;
 	
 	private int comingbackState = 0;
 	private int pickingState = 0;
@@ -239,5 +240,13 @@ public class CleverAgent extends abstractAgent{
 			fe.printStackTrace();
 		}
 		System.out.println(this.getLocalName()+" terminating");
+	}
+
+	public AID getAgentToReach() {
+		return agentToReach;
+	}
+
+	public void setAgentToReach(AID agentToReach) {
+		this.agentToReach = agentToReach;
 	}
 }

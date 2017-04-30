@@ -1,6 +1,8 @@
 package mas.behaviours;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -9,12 +11,16 @@ import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 
 import env.Attribute;
+import env.Couple;
 import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
+import mas.abstractAgent;
 import mas.agents.CleverAgent;
 
 public class PickTreasureBehaviour extends SimpleBehaviour{
@@ -27,7 +33,6 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 
 	private int state = 0;
 	private List<Node> path ;
-	private int exit_value = 0;
 	
 	public PickTreasureBehaviour(mas.abstractAgent myagent) {
 		super(myagent);
@@ -59,6 +64,9 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 					bigger = value ;
 					nextAgent=aid;
 				}
+				((CleverAgent)myAgent).setTreasureToFind(""); // il n'y a plus de trésor a chercher
+				//mise a jour du trésor
+				//graph.getNode(((mas.abstractAgent)this.myAgent).getCurrentPosition()).setAttribute("content", values);;
 			}
 		} else{
 			//formation de toutes les coalitions possibles (ArrayList<ArrayList<String>>) pour ce type de tresor
@@ -284,14 +292,15 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 		state = ((CleverAgent)myAgent).getPickingState();
 		String myPos = ((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		Graph myGraph = ((CleverAgent)this.myAgent).getGraph();
-		exit_value=0;
 		
 		switch(state){
 			case 0:
 				//choisir trésor ...
 				System.out.println(myAgent.getLocalName().toString()+" se prepare à chercher trésor");
 				
-				String pos_tresor = chooseTreasure();
+				String pos_tresor = ((CleverAgent)myAgent).getTreasureToFind();
+				if(pos_tresor.equals(""))
+					pos_tresor = chooseTreasure();
 				((CleverAgent)myAgent).setTreasureToFind(pos_tresor);
 				System.out.println(myAgent.getLocalName().toString()+" a ciblé le trésor en position "+pos_tresor);
 				
@@ -323,16 +332,32 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 					int taken = ((mas.abstractAgent)this.myAgent).pick();
 					System.out.println("The agent grabbed :"+taken);
 					System.out.println("the remaining backpack capacity is: "+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
-					
+					//mettre a jour le graph
+					List<Couple<String,List<Attribute>>> lobs=((mas.abstractAgent)this.myAgent).observe();
+					//on determine l'indice de la position courante dans lobs 
+					int posIndex = 0;
+					for(int i = 0; i < lobs.size(); i++){
+						if(lobs.get(i).getLeft() == myPos){
+							posIndex = i;
+							break;
+						}
+					}
+					List<Attribute> lattribute= lobs.get(posIndex).getRight();
+					myGraph.getNode(myPos).setAttribute("content",lattribute);
+					((CleverAgent)myAgent).setGraph(myGraph);
 					//si on ignorait son type le mettre à jour
 					if(((CleverAgent)myAgent).getType().equals("")){
+						//si on a pris on est de ce type
 						if(taken > 0){
 							((CleverAgent)myAgent).setType(a.getName());
 						} else {
-							if(a.getName().equals("Treasure"))
-								((CleverAgent)myAgent).setType("Diamonds");
-							else
-								((CleverAgent)myAgent).setType("Treasure");
+							//si on a rien pris mais qu'il y a avait bien quelque chose !
+							if((Integer)a.getValue()!=0){
+								if(a.getName().equals("Treasure"))
+									((CleverAgent)myAgent).setType("Diamonds");
+								else
+									((CleverAgent)myAgent).setType("Treasure");
+							}
 						}
 						//l'indiquer dans le DF
 //						DFAgentDescription dfd = new DFAgentDescription();
@@ -358,17 +383,24 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 				//...et chercher une coalition pour ce trésor
 				System.out.println(myAgent.getLocalName().toString()+" cherche une coalition");
 				AID agentToReach = searchCoalition(((CleverAgent)myAgent).getTreasureToFind());
+				((CleverAgent)myAgent).setAgentToReach(agentToReach);
 				System.out.println("Meilleure coalition : "+agentToReach.getLocalName().toString());
 				String pos_nextAgent = ((CleverAgent)myAgent).getAgentList().get(agentToReach).get(0);
 				System.out.println(myAgent.getLocalName().toString()+" va contacter "+agentToReach.getLocalName().toString()+" se trouvant en "+pos_nextAgent);
 				
-			
-				path = searchPath(myPos, pos_nextAgent);
+				//se placer au noeud voisin 
+				String near;
+				myGraph.getNode(pos_nextAgent);
+				if(myGraph.getNode(pos_nextAgent).getNeighborNodeIterator().hasNext())
+					near = myGraph.getNode(pos_nextAgent).getNeighborNodeIterator().next().getId();
+				else
+					near = pos_nextAgent;
+				path = searchPath(myPos, near);
 				((CleverAgent)myAgent).setPickingState(state+1);
 				break ;
 				
 			case 4:
-				//... se déplacer jusqu'a 2 noeuds de la position de l'agent
+				//... se déplacer jusqu'au noeud voisin de la position de l'agent
 				//si le prochain noeud du chemin a ete atteint
 				if(!path.isEmpty() && myPos.equals(path.get(0).getId())){
 					path.remove(0);
@@ -377,13 +409,49 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 				}
 				//si le noeud initial a ete atteint
 				else if(path.isEmpty()){
-					((CleverAgent) super.myAgent).setComingbackState(state+1);
+					System.out.println(myAgent.getLocalName().toString()+" est prêt de celui qu'il veut contacter ");
+					((CleverAgent) super.myAgent).setPickingState(state+1);
 				}	
 				else{
 					//TODO: cas interblocage
 				}
 				break;
 				
+			case 5 :
+				//on contacte l'agent : on lui envoie la liste des infos des agents ET le tresor modifié
+				// sauf que dans cette liste on a remplacé la case de l'agent contacté par notre case
+				AID agent = ((CleverAgent)myAgent).getAgentToReach();
+				System.out.println(myAgent.getLocalName().toString()+" va contacter "+agent.getLocalName().toString());
+				
+				HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)myAgent).getAgentList();
+				agentList.remove(agent);
+				ArrayList<String> my_info = new ArrayList<String>(Arrays.asList(((CleverAgent)myAgent).getFirstPosition(),((mas.abstractAgent)myAgent).getBackPackFreeSpace()+"",((CleverAgent)myAgent).getType()));
+				agentList.put(myAgent.getAID(),my_info );
+				
+				//on envoie d'abord la liste
+				ACLMessage msg = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+				msg.setSender(myAgent.getAID()); msg.addReceiver(agent);
+				try {
+					msg.setContentObject(agentList);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				((mas.abstractAgent)myAgent).sendMessage(msg);
+				//puis les infos sur le trésor 
+				msg = new ACLMessage(ACLMessage.CFP);
+				msg.setSender(myAgent.getAID()); msg.addReceiver(agent);
+				msg.setContent(((CleverAgent)myAgent).getTreasureToFind());
+				
+				((mas.abstractAgent)myAgent).sendMessage(msg);
+				
+				((CleverAgent)myAgent).setPickingState(state+1);
+				break ;
+				
+			case 6 : 
+				System.out.println(myAgent.getLocalName().toString()+" va rentrer chez lui");
+				((CleverAgent) super.myAgent).setComingbackState(6);
+				((CleverAgent)myAgent).setPickingState(state+1);
+				break ;
 				
 			default:
 				break;
@@ -394,7 +462,6 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 
 
 	public boolean done() {
-		// TODO Auto-generated method stub
-		return false;
+		return state == 7;
 	}
 }
