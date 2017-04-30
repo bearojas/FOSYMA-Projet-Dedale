@@ -1,21 +1,20 @@
 package mas.agents;
 
-import jade.core.AID;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import mas.abstractAgent;
-import mas.behaviours.GetAgentBehaviour;
-import mas.behaviours.InscriptionBehaviour;
-import mas.behaviours.MainBehaviour;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
 
 import env.Environment;
+import jade.core.AID;
+import mas.abstractAgent;
+import mas.behaviours.CollectBehaviour;
+import mas.behaviours.GetAgentBehaviour;
+import mas.behaviours.InscriptionBehaviour;
+import mas.behaviours.MainBehaviour;
 
 public class CleverAgent extends abstractAgent{
 
@@ -38,6 +37,7 @@ public class CleverAgent extends abstractAgent{
 	private HashMap<AID, ArrayList<String>> agentList = new HashMap<AID, ArrayList<String>>();
 	private String firstPosition;
 	
+	private int comingbackState = 0;
 	private int communicationState = 0;
 	private boolean interblocage = false;	
 	private int interblocageState = 0;
@@ -78,6 +78,14 @@ public class CleverAgent extends abstractAgent{
 
 	public void setFirstPosition(String firstPosition) {
 		this.firstPosition = firstPosition;
+	}
+
+	public int getComingbackState() {
+		return comingbackState;
+	}
+
+	public void setComingbackState(int comingbackState) {
+		this.comingbackState = comingbackState;
 	}
 
 	public ArrayList<AID> getAgentsNearby() {

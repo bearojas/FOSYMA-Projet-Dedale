@@ -31,12 +31,11 @@ public class ExploreBehaviour extends SimpleBehaviour {
 	private int step = 0;
 	private int immo = 0;
 	private final int MAX_STEP = 10;
-	//TODO A SUPPRIMER mais on peut le laisser en fait
-	private int FIN=0;
 	/**
 	 * exit value : 0 -> explore
 	 * 				2 -> communication Time 
 	 * 				3 -> interblocage sur un chemin
+	 * 				4 -> fin de la phase d'exploration
 	 */
 	private int exitValue = 0;
 	
@@ -52,35 +51,32 @@ public class ExploreBehaviour extends SimpleBehaviour {
 
 	/**
 	 * fonction de recherche du plus court chemin vers le noeud ouvert le plus proche
-	 * @param myGraph : le graphe � parcourir
 	 * @param root : noeud racine
-	 * @param open : liste des noeuds non visit�s
 	 * @return le plus court chemin sans la racine vers le noeud ouvert le plus proche
 	 */
-	public List<Node> search(Graph myGraph,Node root, ArrayList<String> open){
+	public List<Node> search(Node root){
 
 		Dijkstra dijk = new Dijkstra(Dijkstra.Element.NODE, null, null);
-		dijk.init(myGraph);
+		dijk.init(graph);
 		dijk.setSource(root);
 		dijk.compute();
 
 		int min = Integer.MAX_VALUE;
 		String shortest = null;
 		
-		for(String id : open){
-			double l = dijk.getPathLength(myGraph.getNode(id));
+		for(String id : opened){
+			double l = dijk.getPathLength(graph.getNode(id));
 			if(l < min){
 				min = (int) l;
 				shortest = id ;
 			}
 		}	
-		List<Node> shortPath = dijk.getPath(myGraph.getNode(shortest)).getNodePath();
-		//shortPath.remove(0);
+		List<Node> shortPath = dijk.getPath(graph.getNode(shortest)).getNodePath();
 		return shortPath ;
 	}
 	
 	/**
-	 * D�placement de l'agent qui suit un chemin : traite les interblocages
+	 * Deplacement de l'agent qui suit un chemin : traite les interblocages
 	 */
 	public void followPath(){
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
@@ -349,15 +345,12 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			} else {
 				//si on n'a plus de noeuds ouverts, l'exploration est finie
 				if(opened.isEmpty()){
-					if(FIN == 0)
-					//finished = true;
-						System.err.println("Exploration finie pour "+myAgent.getLocalName()+": "+graph.getNodeCount()+"noeuds");
-					block(10000);
-					Random r= new Random();
-					int moveId=r.nextInt(lobs.size());
-					((mas.abstractAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());
-					FIN++;
-					//this.myAgent.doDelete();
+					exitValue = 4;
+					finished = true;
+					refreshAgent();
+//					Random r= new Random();
+//					int moveId=r.nextInt(lobs.size());
+//					((mas.abstractAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft());
 				}
 				else{
 					step++;
@@ -378,7 +371,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 
 							//TODO:si on a essaye trop de fois de bouger vers un voisin ouvert -> chercher un autre chemin	
 							if(!((CleverAgent)super.myAgent).getMoved() && immo > 4){							
-								chemin = search(graph, root, opened);
+								chemin = search(root);
 								followPath();			
 							}
 							else{
@@ -390,7 +383,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 						else{
 							// si pas de voisins
 							//on cherche le noeud le plus proche						
-							chemin = search(graph, root, opened);
+							chemin = search(root);
 							System.out.println(this.myAgent.getLocalName()+" : Je cherche un nouveau chemin");
 							followPath();
 							

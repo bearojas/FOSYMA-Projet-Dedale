@@ -1,9 +1,17 @@
 package mas.behaviours;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map.Entry;
+
+import org.graphstream.algorithm.Dijkstra;
+import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 
 import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
+import mas.agents.CleverAgent;
 
 public class PickTreasureBehaviour extends SimpleBehaviour{
 
@@ -36,6 +44,19 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 		
 		return null;
 	}
+	
+	public List<Node> searchPath(String root, String dest){
+		Graph myGraph = ((CleverAgent)this.myAgent).getGraph();
+
+		Dijkstra dijk = new Dijkstra(Dijkstra.Element.NODE, null, null);
+		dijk.init(myGraph);
+		dijk.setSource(myGraph.getNode(root));
+		dijk.compute();
+
+		List<Node> path = dijk.getPath(myGraph.getNode(dest)).getNodePath();
+
+		return path ;
+	}	
 	
 	
 	public void action() {

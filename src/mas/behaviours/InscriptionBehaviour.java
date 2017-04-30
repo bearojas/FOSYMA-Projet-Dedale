@@ -27,7 +27,7 @@ public class InscriptionBehaviour extends OneShotBehaviour{
 		sd.setName(super.myAgent.getLocalName() );
 		dfd.addServices(sd);
 		try {
-		DFService.register(super.myAgent, dfd );
+			DFService.register(super.myAgent, dfd );
 		} catch (FIPAException fe) { fe.printStackTrace(); }
 		
 		//initialisation de la position initiale et la capacite
