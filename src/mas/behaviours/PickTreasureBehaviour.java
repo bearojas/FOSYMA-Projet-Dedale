@@ -1,6 +1,7 @@
 package mas.behaviours;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.graphstream.algorithm.Dijkstra;
@@ -36,13 +37,163 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 	 * @return l'AID de l'agent qu'on va contacter
 	 */
 	private AID searchCoalition(String treasure){		
-		//TODO
-		//recuperer AgentList dans cleverAgent
-		Graph graph = ((CleverAgent)myAgent).getGraph();
+		Graph graph = ((CleverAgent)myAgent).getGraph(); 
+		HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)myAgent).getAgentList();
+		/*cette fonction est appelé une fois qu'on a ramassé trésor
+		 * s'il ne reste rien :  on retourne l'id de l'agent qui a la plus grosse capacité juste après nous
+		 * s'il reste des pieces :
+		 * 	on parcout l'ensemble des agents :
+		 * 		si un agent peut prendre tout tout seul (=) on le retourne et on break
+		 * 		sinon si la somme de plusieurs agents peuvent le ramasser (=) on retourne l'agent qui a la plus grande capacité dans cet ensemble 
+		 */
+		int remain = (Integer)((List<Attribute>) graph.getNode(treasure).getAttribute("content")).get(0).getValue();
+		String typeTreasure = ((List<Attribute>) graph.getNode(treasure).getAttribute("content")).get(0).getName();
+		AID nextAgent = null; //retourne null si aucun agent ne peut aller chercher le trésor? Non, il faut alerter un autre agent
 		
+		if(remain == 0){
+			int bigger = 0;
+			for(AID aid : agentList.keySet()){
+				int value = Integer.parseInt(agentList.get(aid).get(1));
+				if (value>bigger){
+					bigger = value ;
+					nextAgent=aid;
+				}
+			}
+		} else{
+			//formation de toutes les coalitions possibles (ArrayList<ArrayList<String>>) pour ce type de tresor
+			ArrayList<ArrayList<AID>> coalitions = new ArrayList<ArrayList<AID>>();
+			//coalitions à 1 agent
+			for(AID aid : agentList.keySet()){
+				//si l'agent est de type ce trésor ou type inconnu on l'ajoute aux coalitions
+				if(agentList.get(aid).get(2).equals(typeTreasure)|| agentList.get(aid).get(2).equals("")){
+					//si l'agent correspond exactement a la quantite, c'est lui qu'il faut prévenir
+					if(Integer.parseInt(agentList.get(aid).get(1))==remain){
+						nextAgent = aid ;
+						return nextAgent;
+					} else {
+						ArrayList<AID> col = new ArrayList<AID>(); col.add(aid);
+						coalitions.add(col);
+					}
+				}
+			}
+			//coalitions multi agents qu'avec les agents qui sont du bon type
+			if(!coalitions.isEmpty()){
+				int i=2;
+				int nbAgents = coalitions.size();
+				//formation coalitions à i agents
+				while(i<= nbAgents){
+					ArrayList<ArrayList<AID>> tmp = new ArrayList<ArrayList<AID>>();
+					for (ArrayList<AID> coal : coalitions){
+						//on prend une coalition et on la concatène avec une autre si la coalition n'est pas deja dans la liste
+						for(ArrayList<AID> coal2 : coalitions){
+							if(! coal.equals(coal2)){
+								ArrayList<AID> newCoal = new ArrayList<AID>();
+								newCoal.addAll(coal);
+								for(int j=0; j<coal2.size();j++){
+									if(! coal.contains(coal2.get(j)))
+										newCoal.add(coal2.get(j));
+								}
+								if(! tmp.contains(newCoal))
+									tmp.add(newCoal);
+							}
+						}
+					}
+					coalitions.addAll(tmp);
+					i++;
+				}
+				
+				//retourner la meilleure coalition
+				ArrayList<AID> bestCoa = getBestCoalition(coalitions, remain);
+				//parmi elle, prendre l'agent de plus grosse capacite
+				int bigger = 0;
+				for(AID aid : bestCoa){
+					int value = Integer.parseInt(agentList.get(aid).get(1));
+					if (value>bigger){
+						bigger = value ;
+						nextAgent=aid;
+					}
+				}
+				
+				
+			}else {
+				//aucun agent ne correspond au type du tresor : chercher le prochain plus gros agent
+				int bigger = 0;
+				for(AID aid : agentList.keySet()){
+					int value = Integer.parseInt(agentList.get(aid).get(1));
+					if (value>bigger){
+						bigger = value ;
+						nextAgent=aid;
+					}
+				}
+			}
+		}
 		
-		return null;
+		return nextAgent;
 	}
+	
+	
+	
+	
+	
+	/**
+	 * retourne la meilleure coalition pour le montant de tresor indiqué
+	 * @param coalitions
+	 * @param quantite
+	 */
+	private ArrayList<AID> getBestCoalition(ArrayList<ArrayList<AID>> coalitions, int quantite){
+		HashMap<AID, ArrayList<String>> agentList = ((CleverAgent)myAgent).getAgentList();
+		ArrayList<ArrayList<AID>> equalCoalition = new ArrayList<ArrayList<AID>>();
+		ArrayList<ArrayList<AID>> moreCoalition = new ArrayList<ArrayList<AID>>();
+		ArrayList<ArrayList<AID>> lessCoalition = new ArrayList<ArrayList<AID>>() ;
+		
+		for (ArrayList<AID> coalition : coalitions) {
+			//faire la somme des capacites des membres de la coalition
+			int sum_coa = 0;
+			for (int i =0; i<coalition.size(); i++){
+				sum_coa += Integer.parseInt(agentList.get(coalition.get(i)).get(1));
+			}
+			//ajouter la coalition au bon groupe
+			if(sum_coa == quantite)
+				equalCoalition.add(coalition);
+			if(sum_coa > quantite)
+				moreCoalition.add(coalition);
+			if(sum_coa<quantite)
+				lessCoalition.add(coalition);
+		}
+		ArrayList<AID> bestCoa = new ArrayList<AID>();
+		int taille = 999999;
+		if(! equalCoalition.isEmpty()){
+			//si une coalition peut ramasser exactement, prendre celle de plus petite taille
+			for(ArrayList<AID> c : equalCoalition){
+				if (c.size()<taille){
+					taille=c.size();
+					bestCoa = c;
+				}
+			}
+			return bestCoa;
+			
+		} else if(! moreCoalition.isEmpty()){
+			//si aucune coalition ne peut ramasser exactement, prendre ceux qui peuvent ramasser  de plus petite taille
+			for(ArrayList<AID> c : moreCoalition){
+				if (c.size()<taille){
+					taille=c.size();
+					bestCoa = c;
+				}
+			}
+			return bestCoa;
+			
+		} else {
+			//si aucune coalition ne peut ramasser le trésor en entier, prendre celle de plus petite taille qui prendrace qu'elle peut
+			for(ArrayList<AID> c : lessCoalition){
+				if (c.size()<taille){
+					taille=c.size();
+					bestCoa = c;
+				}
+			}
+			return bestCoa;
+		}
+	}
+	
 	
 	
 	/**
@@ -50,8 +201,6 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 	 * @return la position du trésor à chercher
 	 */
 	private String chooseTreasure(){
-		//TODO
-		//recuperer AgentList et Treasures dans cleverAgent
 		ArrayList<String> treasure = ((CleverAgent)myAgent).getTreasures();
 		ArrayList<String> diamonds = ((CleverAgent)myAgent).getDiamonds();
 		Graph graph = ((CleverAgent)myAgent).getGraph();
@@ -126,7 +275,7 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 	
 	public void action() {
 		// TODO choisir un tresor a ramasser
-		// mettre sont type dans les pages jaunes si pas fait
+		// mettre son type dans les pages jaunes si pas fait
 		//chercher une nouvelle coalition
 		//chercher l'agent concerné
 		
@@ -149,13 +298,9 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 			case 1:
 				//...aller jusqu'au trésor
 				String dest = ((CleverAgent)this.myAgent).getTreasureToFind();
-				
-				Dijkstra dijk = new Dijkstra(Dijkstra.Element.NODE, null, null);
-				dijk.init(myGraph);
-				dijk.setSource(myGraph.getNode(myPos));
-				dijk.compute();
 
-				path = dijk.getPath(myGraph.getNode(dest)).getNodePath();
+				path = searchPath(myPos, dest);
+				
 				((CleverAgent)myAgent).setPickingState(state+1);
 				break ;
 				
@@ -207,12 +352,33 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 				
 				
 			case 3:
-				//...etchercher une coalition pour ce trésor
+				//...et chercher une coalition pour ce trésor
 				System.out.println(myAgent.getLocalName().toString()+" cherche une coalition");
-				//searchCoalition(pos_tresor);
-			
-			case 4:
+				AID agentToReach = searchCoalition(((CleverAgent)myAgent).getTreasureToFind());
+				String pos_nextAgent = ((CleverAgent)myAgent).getAgentList().get(agentToReach).get(0);
+				System.out.println(myAgent.getLocalName().toString()+" va contacter "+agentToReach.getLocalName().toString()+" se trouvant en "+pos_nextAgent);
 				
+			
+				path = searchPath(myPos, pos_nextAgent);
+				((CleverAgent)myAgent).setPickingState(state+1);
+				break ;
+				
+			case 4:
+				//... se déplacer jusqu'a 2 noeuds de la position de l'agent
+				//si le prochain noeud du chemin a ete atteint
+				if(!path.isEmpty() && myPos.equals(path.get(0).getId())){
+					path.remove(0);
+					if(!path.isEmpty())
+						((mas.abstractAgent)this.myAgent).moveTo(path.get(0).getId());
+				}
+				//si le noeud initial a ete atteint
+				else if(path.isEmpty()){
+					((CleverAgent) super.myAgent).setComingbackState(state+1);
+				}	
+				else{
+					//TODO: cas interblocage
+				}
+				break;
 				
 				
 			default:
