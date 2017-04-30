@@ -37,14 +37,9 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 	}
 	
 	public void action() {
-		// TODO 
-		//traiter interblocages 
-		//attente: reste immobile et regarder boite aux lettres et regarder pages jaunes 
-		// traiter le cas de l'agent avec plus grande capacite une fois que tout le monde soit en "collect"
-		
+
 		String myPos = ((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		state = ((CleverAgent) super.myAgent).getComingbackState();
-		exitValue = 0;
 		
 		switch(state){
 			//chercher un chemin au noeud initial
@@ -58,7 +53,8 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 				dijk.setSource(myGraph.getNode(myPos));
 				dijk.compute();
 
-				path = dijk.getPath(myGraph.getNode(dest)).getNodePath();				
+				path = dijk.getPath(myGraph.getNode(dest)).getNodePath();
+				((CleverAgent) super.myAgent).setChemin(path);
 				((CleverAgent) super.myAgent).setComingbackState(state+1);
 				break;
 				
@@ -77,7 +73,27 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					((CleverAgent) super.myAgent).setComingbackState(state+1);
 				}	
 				else{
-					//TODO: cas interblocage
+					//d'abord on cherche un autre chemin 
+					System.out.println("je cherche un nouveau chemin pour rentrer chez moi");
+					Graph tmpGraph = ((CleverAgent)this.myAgent).getGraph();
+					String destination = ((CleverAgent)this.myAgent).getFirstPosition();
+					if(!destination.equals(path.get(0).getId())){
+						tmpGraph.removeNode(path.get(0));			
+						Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.NODE, null, null);
+						dijkstra.init(tmpGraph);
+						dijkstra.setSource(tmpGraph.getNode(myPos));
+						dijkstra.compute();
+
+						path = dijkstra.getPath(tmpGraph.getNode(destination)).getNodePath();						
+					}
+					
+					if(path.isEmpty()){
+						System.out.println("interblocage");
+						//TODO: cas interblocage
+					}
+					else{
+						((CleverAgent) super.myAgent).setChemin(path);
+					}
 				}
 				break;
 				
@@ -203,8 +219,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					((CleverAgent) super.myAgent).setComingbackState(state+1);								
 				}
 				else if(((abstractAgent)this.myAgent).getBackPackFreeSpace() == cap_max){
-					//TODO: que faire en cas d'egalite? ordre alphabetique?
-					//chercher les autres agents qui ont la meme capacite que moi
+
 					boolean max= true;
 					for (AID k : agentList.keySet()){
 						ArrayList<String> other = agentList.get(k);
@@ -231,7 +246,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					((CleverAgent) super.myAgent).setComingbackState(6);
 					exitValue = 2;
 				}
-			
+				break;
 				
 				
 			case 5:
@@ -263,7 +278,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 	}
 
 	public boolean done() {
-		return state == 5;
+		return state == 6;
 	}
 
 }

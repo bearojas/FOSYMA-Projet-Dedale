@@ -279,6 +279,7 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 		//chercher une nouvelle coalition
 		//chercher l'agent concerné
 		
+		
 		state = ((CleverAgent)myAgent).getPickingState();
 		String myPos = ((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		Graph myGraph = ((CleverAgent)this.myAgent).getGraph();

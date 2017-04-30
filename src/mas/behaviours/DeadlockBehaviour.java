@@ -15,7 +15,7 @@ public class DeadlockBehaviour extends SimpleBehaviour{
 	}
 
 	public void action() {
-		// TODO Auto-generated method stub
+
 		
 		switch(state){
 			case 0:

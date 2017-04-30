@@ -86,7 +86,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			chemin.remove(0);
 
 		Node next = chemin.get(0);
-		//TODO
 		/*
 		 * si on a pas pu se d�placer il y a un agent qui nous bloque
 		 * rentrer en communication avec lui
@@ -293,45 +292,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				System.out.println(this.myAgent.getLocalName()+" is in Explore and has a new message in the mailbox "+msg.getContent());
 			}
 			
-			
-//			//TODO: facon de vider la boite aux lettres de messages d'interblocage 
-//			//si on est en interblocage on change de behaviour sinon on ignore
-//			else if(blockMsg != null){
-//				if(chemin.size() != 0 && blockMsg.getContent().equals( myPosition+"_"+chemin.get(0))){
-//					((CleverAgent)this.myAgent).setInterblocageState(1); //on passe directement en 1					
-//					((CleverAgent)this.myAgent).setInterblocage(true);	
-//					
-//					AID sender = blockMsg.getSender();
-//
-//					ArrayList<AID> receiver = new ArrayList<AID>();
-//					receiver.add(sender);
-//					((CleverAgent)this.myAgent).setAgentsNearby(receiver);
-//					
-//					System.out.println("INTERBLOCAGE avec "+sender.toString()+" pour agent "+myAgent.getName()+" qui veut aller en "+chemin.get(0));
-//					final ACLMessage mess = new ACLMessage(ACLMessage.PROPOSE);
-//					mess.setSender(this.myAgent.getAID()); mess.setContent(chemin.get(0)+"_"+myPosition); //le noeud qui nous bloque_ou on est
-//					mess.addReceiver(sender);
-//					((mas.abstractAgent)this.myAgent).sendMessage(mess);
-//
-//					refreshAgent();
-//					exitValue = 3;
-//					step = 0;
-//					immo = 0;
-//					finished = true ;
-//					
-//				}
-//				//si pas en interblocage mais l'autre agent est dans un voisin, on enleve ce voisin pour eviter d'y aller
-//				else{
-//					for(String v: neighbors){
-//						if( blockMsg.getContent().equals( myPosition+"_"+v)){
-//							neighbors.remove(v);
-//							break;
-//						}
-//					}
-//					
-//				}
-//				
-//			}
 					
 			//tous les MAX_STEP temps, on echange la map a ceux proches de nous			
 			else if(step>=MAX_STEP){
@@ -371,7 +331,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 							System.out.println(myAgent.getLocalName()+" va en "+ next.getId());
 							immo++;
 
-							//TODO:si on a essaye trop de fois de bouger vers un voisin ouvert -> chercher un autre chemin	
+							//si on a essaye trop de fois de bouger vers un voisin ouvert -> chercher un autre chemin	
 							if(!((CleverAgent)super.myAgent).getMoved() && immo > 4){							
 								chemin = search(root);
 								followPath();			
