@@ -67,6 +67,7 @@ public class GetBackHomeBehaviour extends SimpleBehaviour{
 					path.remove(0);
 					if(!path.isEmpty()){
 						System.out.println(myAgent.getLocalName().toString()+" va en "+path.get(0).getId());
+						block(1000);
 						((mas.abstractAgent)this.myAgent).moveTo(path.get(0).getId());
 					}
 						

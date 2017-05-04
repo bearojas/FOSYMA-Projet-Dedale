@@ -34,14 +34,15 @@ public class Principal {
 
 	private static Environment env;// static ref of the real environment
 	
-	private static final int NBAGENTS = 3 ;
+	private static final int NBAGENTS = 6 ;
 
 	public static void main(String[] args){
 
 		//0) Create the real environment and the observed one
-		env= new Environment(ENVtype.GRID_T,5,null);
+		//env= new Environment(ENVtype.GRID_T,5,null);
 		//env= new Environment(ENVtype.DOROGOVTSEV_T,15,null);
 		//env=new Environment("ressources/map2015","ressources/map2015-config");
+		env = new Environment("ressources/map20172", "ressources/map2017config2");
 		
 		//1), create the platform (Main container (DF+AMS) + containers + monitoring agents : RMA and SNIFFER)
 		rt=emptyPlatform(containerList);
@@ -233,7 +234,7 @@ public class Principal {
 //
 		c = containerList.get("container0");
 		for (int a=1; a<= NBAGENTS  ; a++){
-			agentName="Explo"+a;
+			agentName="Agent"+a;
 			try {
 
 				Object[] objtab=new Object[]{env};//used to give informations to the agent

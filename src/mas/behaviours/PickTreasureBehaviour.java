@@ -320,8 +320,11 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 				//si le prochain noeud du chemin a ete atteint
 				if(!path.isEmpty() && myPos.equals(path.get(0).getId())){
 					path.remove(0);
-					if(!path.isEmpty())
+					if(!path.isEmpty()){
+						block(1000);
 						((mas.abstractAgent)this.myAgent).moveTo(path.get(0).getId());
+
+					}
 				}
 				//si le noeud tresor a ete atteint
 				else if(path.isEmpty()){
@@ -404,8 +407,10 @@ public class PickTreasureBehaviour extends SimpleBehaviour{
 				//si le prochain noeud du chemin a ete atteint
 				if(!path.isEmpty() && myPos.equals(path.get(0).getId())){
 					path.remove(0);
-					if(!path.isEmpty())
+					if(!path.isEmpty()){
+						block(1000);
 						((mas.abstractAgent)this.myAgent).moveTo(path.get(0).getId());
+					}
 				}
 				//si le noeud initial a ete atteint
 				else if(path.isEmpty()){

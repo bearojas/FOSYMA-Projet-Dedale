@@ -228,6 +228,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 //				e.printStackTrace();
 //			}
 
+			block(1000);
 			//example related to the use of the backpack for the treasure hunt
 //			Boolean b=false;
 //			for(Attribute a:lattribute){
